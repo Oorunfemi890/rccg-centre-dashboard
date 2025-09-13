@@ -20,37 +20,37 @@ const AdminLayout = () => {
 
   const sidebarItems = [
     {
-      path: '/admin/dashboard',
+      path: '/dashboard', // Removed /admin prefix
       icon: 'ri-dashboard-line',
       label: 'Dashboard',
       permission: 'all'
     },
     {
-      path: '/admin/members',
+      path: '/members', // Removed /admin prefix
       icon: 'ri-group-line',
       label: 'Members',
       permission: 'members'
     },
     {
-      path: '/admin/attendance',
+      path: '/attendance', // Removed /admin prefix
       icon: 'ri-calendar-check-line',
       label: 'Attendance',
       permission: 'attendance'
     },
     {
-      path: '/admin/events',
+      path: '/events', // Removed /admin prefix
       icon: 'ri-calendar-event-line',
       label: 'Events',
       permission: 'events'
     },
     {
-      path: '/admin/celebrations',
+      path: '/celebrations', // Removed /admin prefix
       icon: 'ri-cake-3-line',
       label: 'Celebrations',
       permission: 'celebrations'
     },
     {
-      path: '/admin/profile',
+      path: '/profile', // Removed /admin prefix
       icon: 'ri-user-settings-line',
       label: 'Profile',
       permission: 'all'
@@ -199,7 +199,7 @@ const AdminLayout = () => {
                   <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
                     <div className="py-1">
                       <Link
-                        to="/admin/profile"
+                        to="/profile" // Also removed /admin prefix here
                         onClick={() => setProfileDropdownOpen(false)}
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
