@@ -200,7 +200,7 @@ const EventsManagement = () => {
           <p className="text-gray-600 mt-1">Manage church events and activities</p>
         </div>
         <Link
-          to="/admin/events/new"
+          to="/events/new"
           className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
         >
           <i className="ri-add-line mr-2"></i>
@@ -405,7 +405,7 @@ const EventsManagement = () => {
                         <i className="ri-eye-line"></i>
                       </button>
                       <Link
-                        to={`/admin/events/${event.id}/edit`}
+                        to={`/events/${event.id}/edit`}
                         className="text-yellow-600 hover:text-yellow-900"
                         title="Edit Event"
                       >
@@ -467,7 +467,7 @@ const EventsManagement = () => {
             </p>
             {events.length === 0 && (
               <Link
-                to="/admin/events/new"
+                to="/events/new"
                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <i className="ri-add-line mr-2"></i>
@@ -656,7 +656,7 @@ const EventsManagement = () => {
               
               <div className="flex justify-end space-x-3 pt-6 mt-6 border-t">
                 <Link
-                  to={`/admin/events/${selectedEvent.id}/edit`}
+                  to={`/events/${selectedEvent.id}/edit`}
                   className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                   onClick={() => setShowEventDetails(false)}
                 >

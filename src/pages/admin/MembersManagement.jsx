@@ -122,7 +122,7 @@ const MembersManagement = () => {
           <p className="text-gray-600 mt-1">Manage church members and their information</p>
         </div>
         <Link
-          to="/admin/members/new"
+          to="/members/new"
           className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
         >
           <i className="ri-add-line mr-2"></i>
@@ -320,7 +320,7 @@ const MembersManagement = () => {
                         <i className="ri-eye-line"></i>
                       </button>
                       <Link
-                        to={`/admin/members/${member.id}/edit`}
+                        to={`/members/${member.id}/edit`}
                         className="text-yellow-600 hover:text-yellow-900"
                         title="Edit Member"
                       >
@@ -480,7 +480,7 @@ const MembersManagement = () => {
                 
                 <div className="flex space-x-3 pt-4">
                   <Link
-                    to={`/admin/members/${selectedMember.id}/edit`}
+                    to={`/members/${selectedMember.id}/edit`}
                     className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-center hover:bg-blue-700 transition-colors"
                     onClick={() => setShowMemberDetails(false)}
                   >

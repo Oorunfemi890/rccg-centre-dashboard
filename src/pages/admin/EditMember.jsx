@@ -65,12 +65,12 @@ const EditMember = () => {
         });
       } else {
         toast.error(response.message);
-        navigate('/admin/members');
+        navigate('/members');
       }
     } catch (error) {
       console.error('Error fetching member:', error);
       toast.error('Failed to load member details');
-      navigate('/admin/members');
+      navigate('/members');
     } finally {
       setLoading(false);
     }
@@ -156,7 +156,7 @@ const EditMember = () => {
 
       if (response.success) {
         toast.success('Member updated successfully!');
-        navigate('/admin/members');
+        navigate('/members');
       } else {
         toast.error(response.message);
       }
@@ -179,7 +179,7 @@ const EditMember = () => {
 
       if (response.success) {
         toast.success('Member deleted successfully!');
-        navigate('/admin/members');
+        navigate('/members');
       } else {
         toast.error(response.message);
       }
@@ -218,7 +218,7 @@ const EditMember = () => {
             Delete Member
           </button>
           <button
-            onClick={() => navigate('/admin/members')}
+            onClick={() => navigate('/members')}
             className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
           >
             <i className="ri-arrow-left-line mr-2"></i>
@@ -489,7 +489,7 @@ const EditMember = () => {
         <div className="flex items-center justify-end space-x-4 bg-white p-6 rounded-lg shadow-sm border">
           <button
             type="button"
-            onClick={() => navigate('/admin/members')}
+            onClick={() => navigate('/members')}
             className="inline-flex items-center px-6 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
           >
             Cancel

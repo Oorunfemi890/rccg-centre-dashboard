@@ -178,7 +178,7 @@ const NewEvent = () => {
 
       if (response.success) {
         toast.success('Event created successfully!');
-        navigate('/admin/events');
+        navigate('/events');
       } else {
         toast.error(response.message);
       }
@@ -199,7 +199,7 @@ const NewEvent = () => {
           <p className="text-gray-600 mt-1">Add a new event to your church calendar</p>
         </div>
         <button
-          onClick={() => navigate('/admin/events')}
+          onClick={() => navigate('/events')}
           className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
         >
           <i className="ri-arrow-left-line mr-2"></i>
@@ -500,7 +500,7 @@ const NewEvent = () => {
         <div className="flex justify-end space-x-3">
           <button
             type="button"
-            onClick={() => navigate('/admin/events')}
+            onClick={() => navigate('/events')}
             className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancel

@@ -78,12 +78,12 @@ const EditAttendance = () => {
         }
       } else {
         toast.error(response.message);
-        navigate('/admin/attendance');
+        navigate('/attendance');
       }
     } catch (error) {
       console.error('Error fetching attendance record:', error);
       toast.error('Failed to load attendance record');
-      navigate('/admin/attendance');
+      navigate('/attendance');
     } finally {
       setLoading(false);
     }
@@ -176,7 +176,7 @@ const EditAttendance = () => {
 
       if (response.success) {
         toast.success('Attendance updated successfully!');
-        navigate('/admin/attendance');
+        navigate('/attendance');
       } else {
         toast.error(response.message);
       }
@@ -199,7 +199,7 @@ const EditAttendance = () => {
 
       if (response.success) {
         toast.success('Attendance record deleted successfully!');
-        navigate('/admin/attendance');
+        navigate('/attendance');
       } else {
         toast.error(response.message);
       }
@@ -247,7 +247,7 @@ const EditAttendance = () => {
             Delete Record
           </button>
           <button
-            onClick={() => navigate('/admin/attendance')}
+            onClick={() => navigate('/attendance')}
             className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
           >
             <i className="ri-arrow-left-line mr-2"></i>
@@ -481,7 +481,7 @@ const EditAttendance = () => {
         <div className="flex justify-end space-x-3">
           <button
             type="button"
-            onClick={() => navigate('/admin/attendance')}
+            onClick={() => navigate('/attendance')}
             className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancel

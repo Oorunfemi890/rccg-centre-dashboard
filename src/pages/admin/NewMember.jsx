@@ -113,7 +113,7 @@ const NewMember = () => {
 
       if (response.success) {
         toast.success('Member added successfully!');
-        navigate('/admin/members');
+        navigate('/members');
       } else {
         toast.error(response.message);
       }
@@ -134,7 +134,7 @@ const NewMember = () => {
           <p className="text-gray-600 mt-1">Add a new member to your church database</p>
         </div>
         <button
-          onClick={() => navigate('/admin/members')}
+          onClick={() => navigate('/members')}
           className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
         >
           <i className="ri-arrow-left-line mr-2"></i>
@@ -405,7 +405,7 @@ const NewMember = () => {
         <div className="flex justify-end space-x-3">
           <button
             type="button"
-            onClick={() => navigate('/admin/members')}
+            onClick={() => navigate('/members')}
             className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancel

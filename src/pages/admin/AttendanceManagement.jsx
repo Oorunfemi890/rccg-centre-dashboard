@@ -146,7 +146,7 @@ const AttendanceManagement = () => {
           <p className="text-gray-600 mt-1">Track and manage church service attendance</p>
         </div>
         <Link
-          to="/admin/attendance/new"
+          to="/attendance/new"
           className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
         >
           <i className="ri-add-line mr-2"></i>
@@ -319,7 +319,7 @@ const AttendanceManagement = () => {
                         <i className="ri-eye-line"></i>
                       </button>
                       <Link
-                        to={`/admin/attendance/${record.id}/edit`}
+                        to={`/attendance/${record.id}/edit`}
                         className="text-yellow-600 hover:text-yellow-900"
                         title="Edit Record"
                       >
@@ -353,7 +353,7 @@ const AttendanceManagement = () => {
             </p>
             {attendanceRecords.length === 0 && (
               <Link
-                to="/admin/attendance/new"
+                to="/attendance/new"
                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <i className="ri-add-line mr-2"></i>
@@ -463,7 +463,7 @@ const AttendanceManagement = () => {
               
               <div className="flex justify-end space-x-3 pt-6 mt-6 border-t">
                 <Link
-                  to={`/admin/attendance/${selectedRecord.id}/edit`}
+                  to={`/attendance/${selectedRecord.id}/edit`}
                   className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                   onClick={() => setShowDetails(false)}
                 >

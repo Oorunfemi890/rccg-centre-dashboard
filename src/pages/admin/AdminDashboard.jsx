@@ -135,7 +135,7 @@ const AdminDashboard = () => {
               <p className="text-2xl font-bold text-gray-900">{stats.thisWeekAttendance}</p>
             </div>
             <Link 
-              to="/admin/attendance" 
+              to="/attendance" 
               className="text-green-600 hover:text-green-700 text-sm font-medium"
             >
               View All
@@ -154,7 +154,7 @@ const AdminDashboard = () => {
               <p className="text-2xl font-bold text-gray-900">{stats.upcomingEvents}</p>
             </div>
             <Link 
-              to="/admin/events" 
+              to="/events" 
               className="text-purple-600 hover:text-purple-700 text-sm font-medium"
             >
               Manage
@@ -173,7 +173,7 @@ const AdminDashboard = () => {
               <p className="text-2xl font-bold text-gray-900">{stats.pendingCelebrations}</p>
             </div>
             <Link 
-              to="/admin/celebrations" 
+              to="/celebrations" 
               className="text-yellow-600 hover:text-yellow-700 text-sm font-medium"
             >
               Review
@@ -204,13 +204,13 @@ const AdminDashboard = () => {
             <p className="text-sm font-medium text-gray-600 mb-3">Quick Actions</p>
             <div className="space-y-2">
               <Link 
-                to="/admin/attendance/new" 
+                to="/attendance/new" 
                 className="block w-full bg-blue-600 text-white py-2 px-3 rounded text-sm hover:bg-blue-700 transition-colors"
               >
                 Record Attendance
               </Link>
               <Link 
-                to="/admin/events/new" 
+                to="/events/new" 
                 className="block w-full bg-green-600 text-white py-2 px-3 rounded text-sm hover:bg-green-700 transition-colors"
               >
                 Create Event
@@ -259,7 +259,7 @@ const AdminDashboard = () => {
               Upcoming Events
             </h2>
             <Link 
-              to="/admin/events" 
+              to="/events" 
               className="text-blue-600 hover:text-blue-700 text-sm font-medium"
             >
               View All
@@ -306,28 +306,28 @@ const AdminDashboard = () => {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Links</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Link 
-            to="/admin/members" 
+            to="/members" 
             className="flex items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
           >
             <i className="ri-group-line text-blue-600 text-xl mr-3"></i>
             <span className="text-sm font-medium text-blue-900">Members</span>
           </Link>
           <Link 
-            to="/admin/attendance" 
+            to="/attendance" 
             className="flex items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
           >
             <i className="ri-calendar-check-line text-green-600 text-xl mr-3"></i>
             <span className="text-sm font-medium text-green-900">Attendance</span>
           </Link>
           <Link 
-            to="/admin/events" 
+            to="/events" 
             className="flex items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
           >
             <i className="ri-calendar-event-line text-purple-600 text-xl mr-3"></i>
             <span className="text-sm font-medium text-purple-900">Events</span>
           </Link>
           <Link 
-            to="/admin/celebrations" 
+            to="/celebrations" 
             className="flex items-center p-4 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors"
           >
             <i className="ri-cake-3-line text-yellow-600 text-xl mr-3"></i>
