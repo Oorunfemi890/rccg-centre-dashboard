@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { eventsAPI } from '@/services/eventsAPI';
+import { eventsAPI } from '@/Services/eventsAPI';
 import { toast } from 'react-toastify';
 
 const EventsManagement = () => {

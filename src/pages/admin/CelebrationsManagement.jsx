@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { celebrationsAPI } from '@/services/celebrationsAPI';
+import { celebrationsAPI } from '@/Services/celebrationsAPI';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-toastify';
 

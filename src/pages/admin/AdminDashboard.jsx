@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { dashboardAPI } from '@/services/dashboardAPI';
+import { dashboardAPI } from '@/Services/dashboardAPI';
 import { toast } from 'react-toastify';
 
 const AdminDashboard = () => {

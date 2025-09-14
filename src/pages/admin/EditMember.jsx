@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { membersAPI } from '@/services/membersAPI';
+import { membersAPI } from '@/Services/membersAPI';
 import { toast } from 'react-toastify';
 
 const EditMember = () => {

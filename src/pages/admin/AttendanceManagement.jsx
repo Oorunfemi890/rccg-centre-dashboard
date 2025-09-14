@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { attendanceAPI } from '@/services/attendanceAPI';
+import { attendanceAPI } from '@/Services/attendanceAPI';
 import { toast } from 'react-toastify';
 
 const AttendanceManagement = () => {
