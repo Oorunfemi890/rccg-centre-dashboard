@@ -6,12 +6,27 @@ import { toast } from 'react-toastify';
 const EventsManagement = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterCategory, setFilterCategory] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showEventDetails, setShowEventDetails] = useState(false);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalRecords: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+    limit: 10
+  });
+  
+  const [filters, setFilters] = useState({
+    page: 1,
+    limit: 10,
+    search: '',
+    status: 'all',
+    category: 'all',
+    sortBy: 'date',
+    sortOrder: 'ASC'
+  });
+
   const [stats, setStats] = useState({
     totalEvents: 0,
     upcomingEvents: 0,
@@ -19,26 +34,29 @@ const EventsManagement = () => {
     thisMonthEvents: 0
   });
 
-  const eventsPerPage = 10;
-
   useEffect(() => {
     fetchEvents();
     fetchStats();
-  }, []);
+  }, [filters]);
 
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      const response = await eventsAPI.getEvents();
+      const response = await eventsAPI.getEvents(filters);
       
       if (response.success) {
         setEvents(response.data);
+        if (response.pagination) {
+          setPagination(response.pagination);
+        }
       } else {
         toast.error(response.message);
+        setEvents([]);
       }
     } catch (error) {
       console.error('Error fetching events:', error);
       toast.error('Failed to load events');
+      setEvents([]);
     } finally {
       setLoading(false);
     }
@@ -47,11 +65,17 @@ const EventsManagement = () => {
   const fetchStats = async () => {
     try {
       const response = await eventsAPI.getEventsStats();
+      
       if (response.success) {
-        setStats(response.data);
+        setStats({
+          totalEvents: response.data.totalEvents || 0,
+          upcomingEvents: response.data.upcomingEvents || 0,
+          completedEvents: response.data.completedEvents || 0,
+          thisMonthEvents: response.data.thisMonthEvents || 0
+        });
       }
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error('Error fetching events stats:', error);
     }
   };
 
@@ -93,7 +117,7 @@ const EventsManagement = () => {
   };
 
   const handleDelete = async (eventId, eventTitle) => {
-    if (!confirm(`Are you sure you want to delete "${eventTitle}"? This action cannot be undone.`)) {
+    if (!window.confirm(`Are you sure you want to delete "${eventTitle}"? This action cannot be undone.`)) {
       return;
     }
 
@@ -103,7 +127,10 @@ const EventsManagement = () => {
       if (response.success) {
         setEvents(prev => prev.filter(event => event.id !== eventId));
         toast.success('Event deleted successfully');
-        fetchStats(); // Refresh stats
+        
+        // Refresh data to update pagination
+        await fetchEvents();
+        await fetchStats();
       } else {
         toast.error(response.message);
       }
@@ -129,25 +156,50 @@ const EventsManagement = () => {
     }
   };
 
-  // Filter and search logic
-  const filteredEvents = events.filter(event => {
-    const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         event.location.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = filterStatus === 'all' || event.status === filterStatus;
-    const matchesCategory = filterCategory === 'all' || event.category === filterCategory;
-    
-    return matchesSearch && matchesStatus && matchesCategory;
-  });
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value,
+      page: key === 'page' ? value : 1 // Reset to page 1 when filters change
+    }));
+  };
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
-  const startIndex = (currentPage - 1) * eventsPerPage;
-  const paginatedEvents = filteredEvents.slice(startIndex, startIndex + eventsPerPage);
+  const handleClearFilters = () => {
+    setFilters(prev => ({
+      ...prev,
+      search: '',
+      status: 'all',
+      category: 'all',
+      page: 1
+    }));
+  };
 
-  // Get unique categories for filter
-  const categories = [...new Set(events.map(event => event.category))].filter(Boolean);
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      handleFilterChange('page', newPage);
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      const exportFilters = {
+        status: filters.status !== 'all' ? filters.status : undefined,
+        category: filters.category !== 'all' ? filters.category : undefined,
+        format: 'csv'
+      };
+
+      const response = await eventsAPI.exportEvents(exportFilters);
+      
+      if (response.success) {
+        toast.success(response.message);
+      } else {
+        toast.error(response.message);
+      }
+    } catch (error) {
+      console.error('Error exporting events:', error);
+      toast.error('Failed to export events');
+    }
+  };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -182,7 +234,10 @@ const EventsManagement = () => {
     }
   };
 
-  if (loading) {
+  // Get unique categories from events for filter
+  const categories = [...new Set(events.map(event => event.category))].filter(Boolean);
+
+  if (loading && filters.page === 1) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -199,13 +254,22 @@ const EventsManagement = () => {
           <h1 className="text-2xl font-bold text-gray-900">Events Management</h1>
           <p className="text-gray-600 mt-1">Manage church events and activities</p>
         </div>
-        <Link
-          to="/events/new"
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <i className="ri-add-line mr-2"></i>
-          Create Event
-        </Link>
+        <div className="flex items-center space-x-3 mt-4 sm:mt-0">
+          <button
+            onClick={handleExport}
+            className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <i className="ri-download-line mr-2"></i>
+            Export CSV
+          </button>
+          <Link
+            to="/events/new"
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <i className="ri-add-line mr-2"></i>
+            Create Event
+          </Link>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -258,15 +322,15 @@ const EventsManagement = () => {
 
       {/* Filters and Search */}
       <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
             <div className="relative">
               <input
                 type="text"
                 placeholder="Search by title, description, or location..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={filters.search}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
               <i className="ri-search-line absolute left-3 top-3 text-gray-400"></i>
@@ -275,8 +339,8 @@ const EventsManagement = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
             <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+              value={filters.status}
+              onChange={(e) => handleFilterChange('status', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">All Status</option>
@@ -289,24 +353,41 @@ const EventsManagement = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
             <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
+              value={filters.category}
+              onChange={(e) => handleFilterChange('category', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">All Categories</option>
-              {categories.map(category => (
-                <option key={category} value={category}>{category}</option>
-              ))}
+              <option value="Service">Service</option>
+              <option value="Conference">Conference</option>
+              <option value="Seminar">Seminar</option>
+              <option value="Workshop">Workshop</option>
+              <option value="Outreach">Outreach</option>
+              <option value="Fellowship">Fellowship</option>
+              <option value="Youth Event">Youth Event</option>
+              <option value="Children Event">Children Event</option>
+              <option value="Prayer Meeting">Prayer Meeting</option>
+              <option value="Special Program">Special Program</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+            <select
+              value={filters.sortBy}
+              onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="date">Date</option>
+              <option value="title">Title</option>
+              <option value="category">Category</option>
+              <option value="status">Status</option>
+              <option value="createdAt">Created Date</option>
             </select>
           </div>
           <div className="flex items-end">
             <button
-              onClick={() => {
-                setSearchTerm('');
-                setFilterStatus('all');
-                setFilterCategory('all');
-                setCurrentPage(1);
-              }}
+              onClick={handleClearFilters}
               className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
             >
               Clear Filters
@@ -317,16 +398,31 @@ const EventsManagement = () => {
 
       {/* Events Table */}
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">
-            Events ({filteredEvents.length})
+            Events ({pagination.totalRecords})
           </h2>
+          <div className="flex items-center space-x-2">
+            <select
+              value={filters.limit}
+              onChange={(e) => handleFilterChange('limit', parseInt(e.target.value))}
+              className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value={5}>5 per page</option>
+              <option value={10}>10 per page</option>
+              <option value={25}>25 per page</option>
+              <option value={50}>50 per page</option>
+            </select>
+          </div>
         </div>
         
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Event Details
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date & Time
                 </th>
@@ -345,13 +441,17 @@ const EventsManagement = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {paginatedEvents.map((event) => (
+              {events.map((event) => (
                 <tr key={event.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-12 w-12">
                         {event.image ? (
-                          <img src={event.image} alt={event.title} className="h-12 w-12 rounded-lg object-cover" />
+                          <img 
+                            src={event.image} 
+                            alt={event.title} 
+                            className="h-12 w-12 rounded-lg object-cover" 
+                          />
                         ) : (
                           <div className="h-12 w-12 bg-gray-200 rounded-lg flex items-center justify-center">
                             <i className="ri-calendar-event-line text-gray-500"></i>
@@ -359,7 +459,9 @@ const EventsManagement = () => {
                         )}
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{event.title}</div>
+                        <div className="text-sm font-medium text-gray-900 truncate max-w-xs">
+                          {event.title}
+                        </div>
                         <div className="text-sm text-gray-500">{event.category}</div>
                       </div>
                     </div>
@@ -372,7 +474,7 @@ const EventsManagement = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{event.location}</div>
+                    <div className="text-sm text-gray-900 truncate max-w-xs">{event.location}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
@@ -402,28 +504,28 @@ const EventsManagement = () => {
                         className="text-blue-600 hover:text-blue-900"
                         title="View Details"
                       >
-                        <i className="ri-eye-line"></i>
+                        <i className="ri-eye-line text-lg"></i>
                       </button>
                       <Link
                         to={`/events/${event.id}/edit`}
                         className="text-yellow-600 hover:text-yellow-900"
                         title="Edit Event"
                       >
-                        <i className="ri-edit-line"></i>
+                        <i className="ri-edit-line text-lg"></i>
                       </Link>
                       <button
                         onClick={() => handleDuplicate(event.id)}
                         className="text-green-600 hover:text-green-900"
                         title="Duplicate Event"
                       >
-                        <i className="ri-file-copy-line"></i>
+                        <i className="ri-file-copy-line text-lg"></i>
                       </button>
                       <div className="relative group">
                         <button
                           className="text-gray-600 hover:text-gray-900"
                           title="Change Status"
                         >
-                          <i className="ri-more-line"></i>
+                          <i className="ri-more-line text-lg"></i>
                         </button>
                         <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 hidden group-hover:block">
                           <div className="py-1">
@@ -431,7 +533,12 @@ const EventsManagement = () => {
                               <button
                                 key={status}
                                 onClick={() => handleStatusChange(event.id, status)}
-                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left capitalize"
+                                disabled={event.status === status}
+                                className={`block px-4 py-2 text-sm w-full text-left capitalize transition-colors ${
+                                  event.status === status 
+                                    ? 'text-gray-400 cursor-not-allowed' 
+                                    : 'text-gray-700 hover:bg-gray-100'
+                                }`}
                               >
                                 Mark as {status}
                               </button>
@@ -444,7 +551,7 @@ const EventsManagement = () => {
                         className="text-red-600 hover:text-red-900"
                         title="Delete Event"
                       >
-                        <i className="ri-delete-bin-line"></i>
+                        <i className="ri-delete-bin-line text-lg"></i>
                       </button>
                     </div>
                   </td>
@@ -454,18 +561,86 @@ const EventsManagement = () => {
           </table>
         </div>
 
+        {/* Loading State for pagination */}
+        {loading && filters.page > 1 && (
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <span className="ml-2 text-gray-600">Loading...</span>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-700">
+                Showing {((pagination.currentPage - 1) * pagination.limit) + 1} to{' '}
+                {Math.min(pagination.currentPage * pagination.limit, pagination.totalRecords)} of{' '}
+                {pagination.totalRecords} results
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => handlePageChange(pagination.currentPage - 1)}
+                  disabled={!pagination.hasPrevPage || loading}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                
+                {/* Page Numbers */}
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (pagination.totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else {
+                      const start = Math.max(1, pagination.currentPage - 2);
+                      const end = Math.min(pagination.totalPages, start + 4);
+                      pageNum = start + i;
+                      if (pageNum > end) return null;
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        disabled={loading}
+                        className={`px-3 py-2 text-sm font-medium rounded-md ${
+                          pageNum === pagination.currentPage
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                <button
+                  onClick={() => handlePageChange(pagination.currentPage + 1)}
+                  disabled={!pagination.hasNextPage || loading}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Empty State */}
-        {filteredEvents.length === 0 && (
+        {!loading && events.length === 0 && (
           <div className="text-center py-12">
             <i className="ri-calendar-event-line text-gray-400 text-4xl mb-4"></i>
             <h3 className="text-lg font-medium text-gray-900 mb-2">No events found</h3>
             <p className="text-gray-500 mb-4">
-              {events.length === 0 
-                ? "Start by creating your first event." 
-                : "Try adjusting your search or filter criteria."
+              {filters.search || filters.status !== 'all' || filters.category !== 'all'
+                ? "No events match your current filters. Try adjusting your search criteria."
+                : "Start by creating your first event."
               }
             </p>
-            {events.length === 0 && (
+            {!filters.search && filters.status === 'all' && filters.category === 'all' && (
               <Link
                 to="/events/new"
                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
@@ -474,70 +649,6 @@ const EventsManagement = () => {
                 Create First Event
               </Link>
             )}
-          </div>
-        )}
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
-            <div className="flex items-center justify-between">
-              <div className="flex-1 flex justify-between sm:hidden">
-                <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-gray-700">
-                    Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
-                    <span className="font-medium">{Math.min(startIndex + eventsPerPage, filteredEvents.length)}</span> of{' '}
-                    <span className="font-medium">{filteredEvents.length}</span> results
-                  </p>
-                </div>
-                <div>
-                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                    <button
-                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                      disabled={currentPage === 1}
-                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <i className="ri-arrow-left-s-line"></i>
-                    </button>
-                    {[...Array(totalPages)].map((_, i) => (
-                      <button
-                        key={i + 1}
-                        onClick={() => setCurrentPage(i + 1)}
-                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                          currentPage === i + 1
-                            ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                        }`}
-                      >
-                        {i + 1}
-                      </button>
-                    ))}
-                    <button
-                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                      disabled={currentPage === totalPages}
-                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <i className="ri-arrow-right-s-line"></i>
-                    </button>
-                  </nav>
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </div>
@@ -604,7 +715,45 @@ const EventsManagement = () => {
                           {selectedEvent.status}
                         </span>
                       </div>
+                      {selectedEvent.eventFee > 0 && (
+                        <div>
+                          <span className="font-medium text-gray-700">Fee:</span>
+                          <p className="text-gray-900">
+                            {new Intl.NumberFormat('en-NG', {
+                              style: 'currency',
+                              currency: 'NGN'
+                            }).format(selectedEvent.eventFee)}
+                          </p>
+                        </div>
+                      )}
+                      {selectedEvent.registrationRequired && (
+                        <div>
+                          <span className="font-medium text-gray-700">Registration:</span>
+                          <p className="text-gray-900">Required</p>
+                          {selectedEvent.registrationDeadline && (
+                            <p className="text-xs text-gray-500">
+                              Deadline: {formatDate(selectedEvent.registrationDeadline)}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
+
+                    {selectedEvent.tags && selectedEvent.tags.length > 0 && (
+                      <div className="mt-4">
+                        <span className="font-medium text-gray-700 text-sm">Tags:</span>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {selectedEvent.tags.map((tag, index) => (
+                            <span 
+                              key={index}
+                              className="inline-flex px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -645,21 +794,75 @@ const EventsManagement = () => {
 
                   {selectedEvent.isRecurring && (
                     <div className="bg-purple-50 p-4 rounded-lg">
-                      <h4 className="font-semibold text-purple-900 mb-2">Recurring Event</h4>
+                      <h4 className="font-semibold text-purple-900 mb-2">
+                        <i className="ri-repeat-line mr-2"></i>
+                        Recurring Event
+                      </h4>
                       <p className="text-purple-700 text-sm">
                         This event repeats {selectedEvent.recurringPattern}
                       </p>
                     </div>
                   )}
+
+                  {selectedEvent.registrationRequired && (
+                    <div className="bg-yellow-50 p-4 rounded-lg">
+                      <h4 className="font-semibold text-yellow-900 mb-2">
+                        <i className="ri-user-add-line mr-2"></i>
+                        Registration Required
+                      </h4>
+                      <p className="text-yellow-700 text-sm">
+                        Participants must register to attend this event
+                      </p>
+                      {selectedEvent.registrationDeadline && (
+                        <p className="text-yellow-600 text-xs mt-1">
+                          Registration closes: {formatDate(selectedEvent.registrationDeadline)}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {selectedEvent.eventFee === 0 && (
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <h4 className="font-semibold text-green-900 mb-2">
+                        <i className="ri-money-dollar-circle-line mr-2"></i>
+                        Free Event
+                      </h4>
+                      <p className="text-green-700 text-sm">
+                        This is a free event - no payment required
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-blue-900 mb-2">
+                      <i className="ri-information-line mr-2"></i>
+                      Event Information
+                    </h4>
+                    <div className="text-sm text-blue-700 space-y-1">
+                      <p>Created: {formatDate(selectedEvent.createdAt)}</p>
+                      <p>Last Updated: {formatDate(selectedEvent.updatedAt)}</p>
+                      {selectedEvent.isRecurring && (
+                        <p className="font-medium">Recurring: {selectedEvent.recurringPattern}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
               
               <div className="flex justify-end space-x-3 pt-6 mt-6 border-t">
+                <button
+                  onClick={() => handleDuplicate(selectedEvent.id)}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <i className="ri-file-copy-line mr-2"></i>
+                  Duplicate
+                </button>
                 <Link
                   to={`/events/${selectedEvent.id}/edit`}
                   className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                   onClick={() => setShowEventDetails(false)}
                 >
+                  <i className="ri-edit-line mr-2"></i>
                   Edit Event
                 </Link>
                 <button
