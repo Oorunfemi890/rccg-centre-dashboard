@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { authAPI } from '@/Services/authAPI';
+import { authAPI } from '@/Services/authApi';
 import { toast } from 'react-toastify';
 
 // Verification Modal Component
