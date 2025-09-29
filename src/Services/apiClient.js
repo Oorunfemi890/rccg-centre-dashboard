@@ -3,7 +3,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 
 // Base URL for your backend API
-const BASE_URL = import.meta.env.VITE_BASE_URL || "https://rccg-centre-backend-10.onrender.com/api";
+const BASE_URL = import.meta.env.VITE_BASE_URL || "https://rccg-centre-backend.onrender.com/api";
 
 // Create axios instance
 export const apiClient = axios.create({
