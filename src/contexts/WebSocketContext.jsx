@@ -28,7 +28,7 @@ export const WebSocketProvider = ({ children }) => {
 
   const initializeSocket = () => {
     try {
-      const socketUrl = import.meta.env.VITE_SOCKET_URL || 'https://rccg-centre-backend.onrender.com';
+      const socketUrl = import.meta.env.VITE_SOCKET_URL;
       
       const newSocket = io(socketUrl, {
         transports: ['websocket', 'polling'],
