@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { toast } from "react-toastify";
-import { authAPI } from "@/services/authAPI";
+import { authAPI } from "@/services/authApi";
 
 const AuthContext = createContext();
 
