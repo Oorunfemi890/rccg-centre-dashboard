@@ -1,23 +1,30 @@
-// src/Services/apiClient.js - Production Ready with localStorage
+// src/Services/apiClient.js - FIXED FOR PRODUCTION
 import axios from "axios";
 import { toast } from "react-toastify";
 
-// Base URL for your backend API
+// FIXED: Ensure BASE_URL has /api suffix
 const BASE_URL = import.meta.env.VITE_BASE_URL || "https://rccg-centre-backend.onrender.com/api";
 
-// Create axios instance
+console.log('🔧 API Client Configuration:', {
+  baseURL: BASE_URL,
+  environment: import.meta.env.MODE
+});
+
+// Create axios instance with enhanced configuration
 export const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 30000, // 30 seconds timeout
+  timeout: 60000, // Increased to 60 seconds for slow connections
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true, // Important for CORS with credentials
 });
 
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("churchAdminToken");
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -25,15 +32,23 @@ apiClient.interceptors.request.use(
     // Add request timestamp for debugging
     config.metadata = { startTime: new Date() };
 
+    // Log request in development
+    if (import.meta.env.DEV) {
+      console.log(`📤 API Request: ${config.method?.toUpperCase()} ${config.url}`, {
+        hasToken: !!token,
+        headers: config.headers
+      });
+    }
+
     return config;
   },
   (error) => {
-    console.error("Request interceptor error:", error);
+    console.error("❌ Request interceptor error:", error);
     return Promise.reject(error);
   }
 );
 
-// Track if we're currently refreshing token to avoid multiple refresh requests
+// Track if we're currently refreshing token
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -57,11 +72,18 @@ apiClient.interceptors.response.use(
       const endTime = new Date();
       const duration =
         endTime.getTime() - response.config.metadata.startTime.getTime();
-      console.log(
-        `API Response: ${response.config.method?.toUpperCase()} ${
-          response.config.url
-        } - ${duration}ms`
-      );
+      
+      if (import.meta.env.DEV) {
+        console.log(
+          `📥 API Response: ${response.config.method?.toUpperCase()} ${
+            response.config.url
+          } - ${duration}ms`,
+          {
+            status: response.status,
+            data: response.data
+          }
+        );
+      }
     }
 
     return response;
@@ -69,19 +91,44 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Handle network errors
+    // FIXED: Enhanced network error handling
     if (!error.response) {
-      console.error("Network error:", error.message);
-      toast.error("Network error. Please check your internet connection.");
+      console.error("❌ Network error:", {
+        message: error.message,
+        code: error.code,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          baseURL: error.config?.baseURL
+        }
+      });
+
+      // Check if it's a timeout
+      if (error.code === 'ECONNABORTED') {
+        toast.error("Request timeout. Please check your internet connection and try again.");
+      } else if (error.code === 'ERR_NETWORK') {
+        toast.error("Network error. Please check your internet connection.");
+      } else {
+        toast.error("Unable to connect to server. Please check your internet connection.");
+      }
+      
       return Promise.reject(error);
     }
 
     const { status } = error.response;
 
+    // Log error in development
+    if (import.meta.env.DEV) {
+      console.error(`❌ API Error: ${status}`, {
+        url: originalRequest?.url,
+        method: originalRequest?.method,
+        data: error.response.data
+      });
+    }
+
     // Handle 401 errors (Unauthorized) with token refresh
     if (status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        // If we're already refreshing, queue this request
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
@@ -101,9 +148,8 @@ apiClient.interceptors.response.use(
         const refreshToken = localStorage.getItem("churchAdminRefreshToken");
 
         if (refreshToken) {
-          console.log("Attempting to refresh token...");
+          console.log("🔄 Attempting to refresh token...");
 
-          // Create a new axios instance to avoid interceptors during refresh
           const refreshResponse = await axios.post(
             `${BASE_URL}/auth/refresh`,
             {},
@@ -113,6 +159,7 @@ apiClient.interceptors.response.use(
                 "Content-Type": "application/json",
               },
               timeout: 10000,
+              withCredentials: true
             }
           );
 
@@ -123,35 +170,28 @@ apiClient.interceptors.response.use(
               responseData.accessToken || responseData.token;
 
             if (newAccessToken) {
-              // Store the new tokens in localStorage
               localStorage.setItem("churchAdminToken", newAccessToken);
               localStorage.setItem("churchAdminRefreshToken", refreshToken);
 
-              // Process the queue with the new token
               processQueue(null, newAccessToken);
 
-              // Retry the original request with new token
               originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
               return apiClient(originalRequest);
             }
           }
         }
 
-        throw new Error("No valid user for this email or password");
+        throw new Error("No refresh token available");
       } catch (refreshError) {
-        console.error("Token refresh failed:", refreshError);
+        console.error("❌ Token refresh failed:", refreshError);
 
-        // Process the queue with error
         processQueue(refreshError, null);
 
-        // Clear tokens and redirect to login
         localStorage.removeItem("churchAdminToken");
         localStorage.removeItem("churchAdminRefreshToken");
 
-        // Dispatch a custom event that the AuthContext can listen to
         window.dispatchEvent(new CustomEvent("auth:logout"));
 
-        // Redirect to login page if not already there
         if (window.location.pathname !== "/login") {
           window.location.href = "/login";
         }
@@ -170,7 +210,6 @@ apiClient.interceptors.response.use(
 
     switch (status) {
       case 400:
-        // Handle validation errors
         if (
           error.response.data?.errors &&
           Array.isArray(error.response.data.errors)
@@ -193,7 +232,6 @@ apiClient.interceptors.response.use(
         toast.error("Conflict: " + errorMessage);
         break;
       case 422:
-        // Handle validation errors from Laravel/similar frameworks
         if (error.response.data?.errors) {
           const errors = Object.values(error.response.data.errors).flat();
           toast.error(`Validation Error: ${errors.join(", ")}`);
@@ -214,9 +252,9 @@ apiClient.interceptors.response.use(
         toast.error("Service temporarily unavailable. Please try again later.");
         break;
       default:
-        // Don't show toast for other errors if they have specific handling
         if (status >= 400 && status < 500) {
           console.warn(`Client error ${status}: ${errorMessage}`);
+          toast.error(errorMessage);
         } else if (status >= 500) {
           toast.error("Server error. Please try again later.");
         }
@@ -226,7 +264,7 @@ apiClient.interceptors.response.use(
   }
 );
 
-// Helper function to get default error message based on status code
+// Helper function to get default error message
 const getDefaultErrorMessage = (status) => {
   const messages = {
     400: "Bad Request",
@@ -285,7 +323,6 @@ export const downloadFile = async (endpoint, filename) => {
       responseType: "blob",
     });
 
-    // Create blob link to download
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement("a");
     link.href = url;
@@ -310,7 +347,7 @@ export const downloadFile = async (endpoint, filename) => {
   }
 };
 
-// Export token management functions for use in other parts of the app
+// Export token management functions
 export const tokenManager = {
   setTokens: (token, refreshToken) => {
     localStorage.setItem("churchAdminToken", token);
@@ -323,3 +360,10 @@ export const tokenManager = {
     localStorage.removeItem("churchAdminRefreshToken");
   },
 };
+
+// Test API connection on load (only in development)
+if (import.meta.env.DEV) {
+  apiClient.get('/health')
+    .then(() => console.log('✅ API connection successful'))
+    .catch((err) => console.error('❌ API connection failed:', err.message));
+}
