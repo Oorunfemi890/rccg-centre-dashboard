@@ -1,27 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { celebrationsAPI } from '@/Services/celebrationsAPI';
-import { useAuth } from '@/contexts/AuthContext';
-import { useWebSocket, useRealtimeData } from '@/contexts/WebSocketContext';
-import { toast } from 'react-toastify';
+import React, { useState, useEffect } from "react";
+import { celebrationsAPI } from "@/Services/celebrationsAPI";
+import { useAuth } from "@/contexts/AuthContext";
+import { useWebSocket, useRealtimeData } from "@/contexts/WebSocketContext";
+import { toast } from "react-toastify";
 
 const CelebrationsManagement = () => {
   const { admin } = useAuth();
   const { isConnected } = useWebSocket();
-  const lastUpdate = useRealtimeData('celebrations');
-  
+  const lastUpdate = useRealtimeData("celebrations");
+
   const [celebrations, setCelebrations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterType, setFilterType] = useState('all');
-  const [filterSource, setFilterSource] = useState('all'); // New filter for member vs public
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterType, setFilterType] = useState("all");
+  const [filterSource, setFilterSource] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCelebration, setSelectedCelebration] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState("");
   const [stats, setStats] = useState({});
   const [selectedCelebrations, setSelectedCelebrations] = useState([]);
   const [bulkLoading, setBulkLoading] = useState(false);
-  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [celebrationToDelete, setCelebrationToDelete] = useState(null);
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [celebrationToReject, setCelebrationToReject] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const celebrationsPerPage = 12;
 
@@ -35,7 +41,7 @@ const CelebrationsManagement = () => {
   useEffect(() => {
     fetchCelebrations();
     fetchStats();
-  }, []);
+  }, [currentPage]);
 
   const fetchCelebrations = async () => {
     try {
@@ -46,19 +52,19 @@ const CelebrationsManagement = () => {
         status: filterStatus,
         type: filterType,
         memberType: filterSource,
-        search: searchTerm
+        search: searchTerm,
       };
-      
+
       const response = await celebrationsAPI.getCelebrations(filters);
-      
+
       if (response.success) {
         setCelebrations(response.data || []);
       } else {
         toast.error(response.message);
       }
     } catch (error) {
-      console.error('Error fetching celebrations:', error);
-      toast.error('Failed to load celebrations');
+      console.error("Error fetching celebrations:", error);
+      toast.error("Failed to load celebrations");
     } finally {
       setLoading(false);
     }
@@ -71,7 +77,7 @@ const CelebrationsManagement = () => {
         setStats(response.data);
       }
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error("Error fetching stats:", error);
     }
   };
 
@@ -80,7 +86,7 @@ const CelebrationsManagement = () => {
     const timeoutId = setTimeout(() => {
       setCurrentPage(1);
       fetchCelebrations();
-    }, 300); // Debounce search
+    }, 300);
 
     return () => clearTimeout(timeoutId);
   }, [searchTerm, filterStatus, filterType, filterSource]);
@@ -88,7 +94,7 @@ const CelebrationsManagement = () => {
   const handleViewDetails = async (celebrationId) => {
     try {
       const response = await celebrationsAPI.getCelebrationById(celebrationId);
-      
+
       if (response.success) {
         setSelectedCelebration(response.data);
         setShowDetails(true);
@@ -96,44 +102,100 @@ const CelebrationsManagement = () => {
         toast.error(response.message);
       }
     } catch (error) {
-      console.error('Error fetching celebration details:', error);
-      toast.error('Failed to load celebration details');
+      console.error("Error fetching celebration details:", error);
+      toast.error("Failed to load celebration details");
     }
   };
 
-  const handleStatusChange = async (celebrationId, newStatus, rejectionReason = null) => {
+  const handleStatusChange = async (
+    celebrationId,
+    newStatus,
+    rejectionReason = null
+  ) => {
     try {
-      const updateData = { 
+      const updateData = {
         status: newStatus,
-        rejectionReason: newStatus === 'rejected' ? rejectionReason : null
+        rejectionReason: newStatus === "rejected" ? rejectionReason : null,
       };
 
-      const response = await celebrationsAPI.updateCelebrationStatus(celebrationId, updateData);
-      
+      const response = await celebrationsAPI.updateCelebrationStatus(
+        celebrationId,
+        updateData
+      );
+
       if (response.success) {
-        setCelebrations(prev => 
-          prev.map(celebration => 
-            celebration.id === celebrationId 
+        setCelebrations((prev) =>
+          prev.map((celebration) =>
+            celebration.id === celebrationId
               ? { ...celebration, status: newStatus, ...updateData }
               : celebration
           )
         );
-        
+
         toast.success(`Celebration ${newStatus} successfully`);
-        fetchStats(); // Refresh stats
+        fetchStats();
+
+        // Close modals
+        setShowRejectionModal(false);
+        setCelebrationToReject(null);
+        setRejectionReason("");
       } else {
         toast.error(response.message);
       }
     } catch (error) {
-      console.error('Error deleting celebration:', error);
-      toast.error('Failed to delete celebration');
+      console.error("Error updating celebration status:", error);
+      toast.error("Failed to update celebration status");
     }
   };
 
+  // Fixed delete function
+  const handleDelete = async (celebrationId, celebrationName) => {
+    setCelebrationToDelete({ id: celebrationId, name: celebrationName });
+    setShowConfirmDelete(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      const response = await celebrationsAPI.deleteCelebration(
+        celebrationToDelete.id
+      );
+
+      if (response.success) {
+        setCelebrations((prev) =>
+          prev.filter((c) => c.id !== celebrationToDelete.id)
+        );
+        toast.success("Celebration deleted successfully");
+        fetchStats();
+      } else {
+        toast.error(response.message);
+      }
+    } catch (error) {
+      console.error("Error deleting celebration:", error);
+      toast.error("Failed to delete celebration");
+    } finally {
+      setShowConfirmDelete(false);
+      setCelebrationToDelete(null);
+    }
+  };
+
+  // Fixed rejection function
+  const handleReject = (celebrationId) => {
+    setCelebrationToReject(celebrationId);
+    setShowRejectionModal(true);
+  };
+
+  const confirmReject = () => {
+    handleStatusChange(
+      celebrationToReject,
+      "rejected",
+      rejectionReason || "Not suitable for church acknowledgment"
+    );
+  };
+
   const handleSelectCelebration = (celebrationId) => {
-    setSelectedCelebrations(prev => {
+    setSelectedCelebrations((prev) => {
       if (prev.includes(celebrationId)) {
-        return prev.filter(id => id !== celebrationId);
+        return prev.filter((id) => id !== celebrationId);
       } else {
         return [...prev, celebrationId];
       }
@@ -142,9 +204,9 @@ const CelebrationsManagement = () => {
 
   const handleSelectAll = () => {
     const pendingCelebrations = celebrations
-      .filter(c => c.status === 'pending')
-      .map(c => c.id);
-    
+      .filter((c) => c.status === "pending")
+      .map((c) => c.id);
+
     if (selectedCelebrations.length === pendingCelebrations.length) {
       setSelectedCelebrations([]);
     } else {
@@ -152,57 +214,94 @@ const CelebrationsManagement = () => {
     }
   };
 
+  // Fixed bulk approve function
+  const handleBulkApprove = async () => {
+    if (selectedCelebrations.length === 0) return;
+
+    setBulkLoading(true);
+    try {
+      // Since there's no bulk approve in the API, approve one by one
+      for (const celebrationId of selectedCelebrations) {
+        await handleStatusChange(celebrationId, "approved");
+      }
+
+      setSelectedCelebrations([]);
+      toast.success(
+        `${selectedCelebrations.length} celebrations approved successfully`
+      );
+    } catch (error) {
+      console.error("Error bulk approving celebrations:", error);
+      toast.error("Failed to approve celebrations");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  // Fixed image view function
+  const handleViewImage = (imageUrl, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedImage(imageUrl);
+    setShowImageModal(true);
+  };
+
   // Filter and search logic
-  const filteredCelebrations = celebrations.filter(celebration => {
-    const matchesSearch = celebration.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         celebration.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (celebration.phone && celebration.phone.includes(searchTerm)) ||
-                         (celebration.email && celebration.email.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesStatus = filterStatus === 'all' || celebration.status === filterStatus;
-    const matchesType = filterType === 'all' || celebration.type === filterType;
-    const matchesSource = filterSource === 'all' || 
-                         (filterSource === 'member' && celebration.isFromMember) ||
-                         (filterSource === 'public' && !celebration.isFromMember);
-    
+  const filteredCelebrations = celebrations.filter((celebration) => {
+    const matchesSearch =
+      celebration.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      celebration.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (celebration.phone && celebration.phone.includes(searchTerm)) ||
+      (celebration.email &&
+        celebration.email.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    const matchesStatus =
+      filterStatus === "all" || celebration.status === filterStatus;
+    const matchesType = filterType === "all" || celebration.type === filterType;
+    const matchesSource =
+      filterSource === "all" ||
+      (filterSource === "member" && celebration.isFromMember) ||
+      (filterSource === "public" && !celebration.isFromMember);
+
     return matchesSearch && matchesStatus && matchesType && matchesSource;
   });
 
   // Get unique types for filter
-  const types = [...new Set(celebrations.map(celebration => celebration.type))].filter(Boolean);
+  const types = [
+    ...new Set(celebrations.map((celebration) => celebration.type)),
+  ].filter(Boolean);
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'Not set';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
+    if (!dateString) return "Not set";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'approved':
-        return 'bg-green-100 text-green-800 border-green-300';
-      case 'rejected':
-        return 'bg-red-100 text-red-800 border-red-300';
+      case "pending":
+        return "bg-yellow-100 text-yellow-800 border-yellow-300";
+      case "approved":
+        return "bg-green-100 text-green-800 border-green-300";
+      case "rejected":
+        return "bg-red-100 text-red-800 border-red-300";
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-300';
+        return "bg-gray-100 text-gray-800 border-gray-300";
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'pending':
-        return 'ri-time-line';
-      case 'approved':
-        return 'ri-check-line';
-      case 'rejected':
-        return 'ri-close-line';
+      case "pending":
+        return "ri-time-line";
+      case "approved":
+        return "ri-check-line";
+      case "rejected":
+        return "ri-close-line";
       default:
-        return 'ri-question-line';
+        return "ri-question-line";
     }
   };
 
@@ -245,7 +344,9 @@ const CelebrationsManagement = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Celebrations Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Celebrations Management
+          </h1>
           <p className="text-gray-600 mt-1">
             Review and manage member & public celebration requests
             {isConnected && (
@@ -256,11 +357,11 @@ const CelebrationsManagement = () => {
             )}
           </p>
         </div>
-        
+
         {/* Export Button */}
         <div className="mt-4 sm:mt-0">
           <button
-            onClick={() => celebrationsAPI.exportCelebrations('csv')}
+            onClick={() => celebrationsAPI.exportCelebrations("csv")}
             className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors flex items-center"
           >
             <i className="ri-download-line mr-2"></i>
@@ -271,74 +372,104 @@ const CelebrationsManagement = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
+        <div
+          className="bg-white p-4 rounded-lg shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setFilterStatus("all")}
+        >
           <div className="flex items-center">
             <div className="p-2 bg-blue-100 rounded-lg">
               <i className="ri-cake-3-line text-blue-600"></i>
             </div>
             <div className="ml-3">
               <p className="text-sm text-gray-600">Total</p>
-              <p className="text-lg font-semibold text-gray-900">{totalCount}</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {totalCount}
+              </p>
             </div>
           </div>
         </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
+
+        <div
+          className="bg-white p-4 rounded-lg shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setFilterStatus("pending")}
+        >
           <div className="flex items-center">
             <div className="p-2 bg-yellow-100 rounded-lg">
               <i className="ri-time-line text-yellow-600"></i>
             </div>
             <div className="ml-3">
               <p className="text-sm text-gray-600">Pending</p>
-              <p className="text-lg font-semibold text-gray-900">{pendingCount}</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {pendingCount}
+              </p>
             </div>
           </div>
         </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
+
+        <div
+          className="bg-white p-4 rounded-lg shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setFilterStatus("approved")}
+        >
           <div className="flex items-center">
             <div className="p-2 bg-green-100 rounded-lg">
               <i className="ri-check-line text-green-600"></i>
             </div>
             <div className="ml-3">
               <p className="text-sm text-gray-600">Approved</p>
-              <p className="text-lg font-semibold text-gray-900">{approvedCount}</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {approvedCount}
+              </p>
             </div>
           </div>
         </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
+
+        <div
+          className="bg-white p-4 rounded-lg shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setFilterStatus("rejected")}
+        >
           <div className="flex items-center">
             <div className="p-2 bg-red-100 rounded-lg">
               <i className="ri-close-line text-red-600"></i>
             </div>
             <div className="ml-3">
               <p className="text-sm text-gray-600">Rejected</p>
-              <p className="text-lg font-semibold text-gray-900">{rejectedCount}</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {rejectedCount}
+              </p>
             </div>
           </div>
         </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
+
+        <div
+          className="bg-white p-4 rounded-lg shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setFilterSource("member")}
+        >
           <div className="flex items-center">
             <div className="p-2 bg-purple-100 rounded-lg">
               <i className="ri-user-line text-purple-600"></i>
             </div>
             <div className="ml-3">
               <p className="text-sm text-gray-600">Members</p>
-              <p className="text-lg font-semibold text-gray-900">{memberCount}</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {memberCount}
+              </p>
             </div>
           </div>
         </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
+
+        <div
+          className="bg-white p-4 rounded-lg shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setFilterSource("public")}
+        >
           <div className="flex items-center">
             <div className="p-2 bg-gray-100 rounded-lg">
               <i className="ri-global-line text-gray-600"></i>
             </div>
             <div className="ml-3">
               <p className="text-sm text-gray-600">Public</p>
-              <p className="text-lg font-semibold text-gray-900">{publicCount}</p>
+              <p className="text-lg font-semibold text-gray-900">
+                {publicCount}
+              </p>
             </div>
           </div>
         </div>
@@ -348,7 +479,9 @@ const CelebrationsManagement = () => {
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Search
+            </label>
             <div className="relative">
               <input
                 type="text"
@@ -360,9 +493,11 @@ const CelebrationsManagement = () => {
               <i className="ri-search-line absolute left-3 top-3 text-gray-400"></i>
             </div>
           </div>
-          
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Status
+            </label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
@@ -374,23 +509,29 @@ const CelebrationsManagement = () => {
               <option value="rejected">Rejected</option>
             </select>
           </div>
-          
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Type
+            </label>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">All Types</option>
-              {types.map(type => (
-                <option key={type} value={type}>{type}</option>
+              {types.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
               ))}
             </select>
           </div>
-          
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Source</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Source
+            </label>
             <select
               value={filterSource}
               onChange={(e) => setFilterSource(e.target.value)}
@@ -401,14 +542,14 @@ const CelebrationsManagement = () => {
               <option value="public">Public</option>
             </select>
           </div>
-          
+
           <div className="flex items-end">
             <button
               onClick={() => {
-                setSearchTerm('');
-                setFilterStatus('all');
-                setFilterType('all');
-                setFilterSource('all');
+                setSearchTerm("");
+                setFilterStatus("all");
+                setFilterType("all");
+                setFilterSource("all");
                 setCurrentPage(1);
               }}
               className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
@@ -459,7 +600,7 @@ const CelebrationsManagement = () => {
           <h2 className="text-lg font-semibold text-gray-900">
             Celebration Requests ({filteredCelebrations.length})
           </h2>
-          
+
           {pendingCount > 0 && (
             <div className="flex items-center space-x-4">
               <button
@@ -467,36 +608,37 @@ const CelebrationsManagement = () => {
                 className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
               >
                 <i className="ri-checkbox-multiple-line mr-1"></i>
-                {selectedCelebrations.length === celebrations.filter(c => c.status === 'pending').length 
-                  ? 'Deselect All' 
-                  : 'Select All Pending'
-                }
+                {selectedCelebrations.length ===
+                celebrations.filter((c) => c.status === "pending").length
+                  ? "Deselect All"
+                  : "Select All Pending"}
               </button>
             </div>
           )}
         </div>
-        
+
         {filteredCelebrations.length === 0 ? (
           <div className="text-center py-12">
             <i className="ri-cake-3-line text-gray-400 text-4xl mb-4"></i>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No celebration requests found</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No celebration requests found
+            </h3>
             <p className="text-gray-500">
-              {celebrations.length === 0 
-                ? "No celebration requests have been submitted yet." 
-                : "Try adjusting your search or filter criteria."
-              }
+              {celebrations.length === 0
+                ? "No celebration requests have been submitted yet."
+                : "Try adjusting your search or filter criteria."}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
             {filteredCelebrations.map((celebration) => (
-              <div 
+              <div
                 key={celebration.id}
                 className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center">
-                    {celebration.status === 'pending' && (
+                    {celebration.status === "pending" && (
                       <input
                         type="checkbox"
                         checked={selectedCelebrations.includes(celebration.id)}
@@ -512,16 +654,26 @@ const CelebrationsManagement = () => {
                   </div>
                   <div className="flex space-x-2">
                     {getSourceBadge(celebration)}
-                    <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(celebration.status)}`}>
-                      <i className={`${getStatusIcon(celebration.status)} mr-1`}></i>
+                    <span
+                      className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(
+                        celebration.status
+                      )}`}
+                    >
+                      <i
+                        className={`${getStatusIcon(celebration.status)} mr-1`}
+                      ></i>
                       {celebration.status}
                     </span>
                   </div>
                 </div>
 
                 <div className="mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">{celebration.name}</h3>
-                  <p className="text-sm text-gray-600 mb-1">{celebration.type}</p>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                    {celebration.name}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-1">
+                    {celebration.type}
+                  </p>
                   <p className="text-sm text-gray-500">
                     📅 {celebration.month}/{celebration.date}
                     {celebration.year && ` (${celebration.year})`}
@@ -541,16 +693,22 @@ const CelebrationsManagement = () => {
                 {celebration.pictures && celebration.pictures.length > 0 && (
                   <div className="mb-3">
                     <div className="flex space-x-2">
-                      {celebration.pictures.slice(0, 3).map((picture, index) => (
-                        <img 
-                          key={index}
-                          src={picture} 
-                          alt={`Celebration ${index + 1}`} 
-                          className="w-16 h-16 object-cover rounded border border-gray-200"
-                        />
-                      ))}
+                      {celebration.pictures
+                        .slice(0, 3)
+                        .map((picture, index) => (
+                          <img
+                            key={index}
+                            src={picture}
+                            alt={`Celebration ${index + 1}`}
+                            className="w-16 h-16 object-cover rounded border border-gray-200 cursor-pointer hover:opacity-75 transition-opacity"
+                            onClick={(e) => handleViewImage(picture, e)}
+                          />
+                        ))}
                       {celebration.pictures.length > 3 && (
-                        <div className="w-16 h-16 bg-gray-100 rounded border border-gray-200 flex items-center justify-center text-gray-500 text-xs">
+                        <div
+                          className="w-16 h-16 bg-gray-100 rounded border border-gray-200 flex items-center justify-center text-gray-500 text-xs cursor-pointer"
+                          onClick={() => handleViewDetails(celebration.id)}
+                        >
                           +{celebration.pictures.length - 3}
                         </div>
                       )}
@@ -570,17 +728,19 @@ const CelebrationsManagement = () => {
                     >
                       <i className="ri-eye-line"></i>
                     </button>
-                    {celebration.status === 'pending' && (
+                    {celebration.status === "pending" && (
                       <>
                         <button
-                          onClick={() => handleStatusChange(celebration.id, 'approved')}
+                          onClick={() =>
+                            handleStatusChange(celebration.id, "approved")
+                          }
                           className="text-green-600 hover:text-green-800 p-1"
                           title="Approve"
                         >
                           <i className="ri-check-line"></i>
                         </button>
                         <button
-                          onClick={() => handleStatusChange(celebration.id, 'rejected', 'Not suitable for church acknowledgment')}
+                          onClick={() => handleReject(celebration.id)}
                           className="text-red-600 hover:text-red-800 p-1"
                           title="Reject"
                         >
@@ -589,7 +749,9 @@ const CelebrationsManagement = () => {
                       </>
                     )}
                     <button
-                      onClick={() => handleDelete(celebration.id, celebration.name)}
+                      onClick={() =>
+                        handleDelete(celebration.id, celebration.name)
+                      }
                       className="text-red-600 hover:text-red-800 p-1"
                       title="Delete"
                     >
@@ -609,7 +771,9 @@ const CelebrationsManagement = () => {
           <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
             <div className="mt-3">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Celebration Details</h3>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Celebration Details
+                </h3>
                 <button
                   onClick={() => setShowDetails(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -617,48 +781,75 @@ const CelebrationsManagement = () => {
                   <i className="ri-close-line text-xl"></i>
                 </button>
               </div>
-              
+
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Main Content */}
                 <div className="lg:col-span-2 space-y-6">
                   {/* Celebrant Information */}
                   <div className="bg-purple-50 p-4 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-lg font-semibold text-purple-900">Celebrant Information</h4>
+                      <h4 className="text-lg font-semibold text-purple-900">
+                        Celebrant Information
+                      </h4>
                       {getSourceBadge(selectedCelebration)}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <span className="text-sm font-medium text-purple-700">Name:</span>
-                        <p className="text-purple-900">{selectedCelebration.name}</p>
+                        <span className="text-sm font-medium text-purple-700">
+                          Name:
+                        </span>
+                        <p className="text-purple-900">
+                          {selectedCelebration.name}
+                        </p>
                       </div>
                       <div>
-                        <span className="text-sm font-medium text-purple-700">Phone:</span>
-                        <p className="text-purple-900">{selectedCelebration.phone}</p>
+                        <span className="text-sm font-medium text-purple-700">
+                          Phone:
+                        </span>
+                        <p className="text-purple-900">
+                          {selectedCelebration.phone}
+                        </p>
                       </div>
                       {selectedCelebration.email && (
                         <div>
-                          <span className="text-sm font-medium text-purple-700">Email:</span>
-                          <p className="text-purple-900">{selectedCelebration.email}</p>
+                          <span className="text-sm font-medium text-purple-700">
+                            Email:
+                          </span>
+                          <p className="text-purple-900">
+                            {selectedCelebration.email}
+                          </p>
                         </div>
                       )}
                       <div>
-                        <span className="text-sm font-medium text-purple-700">Celebration Type:</span>
-                        <p className="text-purple-900">{selectedCelebration.type}</p>
+                        <span className="text-sm font-medium text-purple-700">
+                          Celebration Type:
+                        </span>
+                        <p className="text-purple-900">
+                          {selectedCelebration.type}
+                        </p>
                       </div>
                       <div>
-                        <span className="text-sm font-medium text-purple-700">Date:</span>
+                        <span className="text-sm font-medium text-purple-700">
+                          Date:
+                        </span>
                         <p className="text-purple-900">
                           {selectedCelebration.month}/{selectedCelebration.date}
-                          {selectedCelebration.year && ` (${selectedCelebration.year})`}
+                          {selectedCelebration.year &&
+                            ` (${selectedCelebration.year})`}
                         </p>
                       </div>
                       {selectedCelebration.member && (
                         <div>
-                          <span className="text-sm font-medium text-purple-700">Member Info:</span>
-                          <p className="text-purple-900">{selectedCelebration.member.name}</p>
+                          <span className="text-sm font-medium text-purple-700">
+                            Member Info:
+                          </span>
+                          <p className="text-purple-900">
+                            {selectedCelebration.member.name}
+                          </p>
                           {selectedCelebration.member.department && (
-                            <p className="text-sm text-purple-700">{selectedCelebration.member.department}</p>
+                            <p className="text-sm text-purple-700">
+                              {selectedCelebration.member.department}
+                            </p>
                           )}
                         </div>
                       )}
@@ -668,71 +859,106 @@ const CelebrationsManagement = () => {
                   {/* Message */}
                   {selectedCelebration.message && (
                     <div>
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Message:</h4>
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">
+                        Message:
+                      </h4>
                       <div className="bg-gray-50 p-3 rounded-lg">
-                        <p className="text-gray-900 text-sm">{selectedCelebration.message}</p>
+                        <p className="text-gray-900 text-sm">
+                          {selectedCelebration.message}
+                        </p>
                       </div>
                     </div>
                   )}
 
                   {/* Pictures */}
-                  {selectedCelebration.pictures && selectedCelebration.pictures.length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">
-                        Pictures ({selectedCelebration.pictures.length}):
-                      </h4>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {selectedCelebration.pictures.map((picture, index) => (
-                          <div key={index} className="relative group">
-                            <img 
-                              src={picture} 
-                              alt={`Celebration ${index + 1}`} 
-                              className="w-full h-32 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-75"
-                              onClick={() => window.open(picture, '_blank')}
-                            />
-                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-lg transition-all flex items-center justify-center">
-                              <i className="ri-external-link-line text-white opacity-0 group-hover:opacity-100 text-xl"></i>
-                            </div>
-                          </div>
-                        ))}
+                  {selectedCelebration.pictures &&
+                    selectedCelebration.pictures.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">
+                          Pictures ({selectedCelebration.pictures.length}):
+                        </h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {selectedCelebration.pictures.map(
+                            (picture, index) => (
+                              <div key={index} className="relative group">
+                                <img
+                                  src={picture}
+                                  alt={`Celebration ${index + 1}`}
+                                  className="w-full h-32 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-75 transition-opacity"
+                                  onClick={(e) => handleViewImage(picture, e)}
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-lg transition-all flex items-center justify-center">
+                                  <i className="ri-external-link-line text-white opacity-0 group-hover:opacity-100 text-xl"></i>
+                                </div>
+                              </div>
+                            )
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
 
                 {/* Sidebar */}
                 <div className="space-y-4">
                   {/* Status Information */}
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Status Information:</h4>
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">
+                      Status Information:
+                    </h4>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Current Status:</span>
-                        <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(selectedCelebration.status)}`}>
-                          <i className={`${getStatusIcon(selectedCelebration.status)} mr-1`}></i>
+                        <span className="text-sm text-gray-600">
+                          Current Status:
+                        </span>
+                        <span
+                          className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(
+                            selectedCelebration.status
+                          )}`}
+                        >
+                          <i
+                            className={`${getStatusIcon(
+                              selectedCelebration.status
+                            )} mr-1`}
+                          ></i>
                           {selectedCelebration.status}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Submitted:</span>
-                        <span className="text-sm text-gray-900">{formatDate(selectedCelebration.createdAt)}</span>
+                        <span className="text-sm text-gray-600">
+                          Submitted:
+                        </span>
+                        <span className="text-sm text-gray-900">
+                          {formatDate(selectedCelebration.createdAt)}
+                        </span>
                       </div>
                       {selectedCelebration.acknowledgedDate && (
                         <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Acknowledged:</span>
-                          <span className="text-sm text-gray-900">{formatDate(selectedCelebration.acknowledgedDate)}</span>
+                          <span className="text-sm text-gray-600">
+                            Acknowledged:
+                          </span>
+                          <span className="text-sm text-gray-900">
+                            {formatDate(selectedCelebration.acknowledgedDate)}
+                          </span>
                         </div>
                       )}
                       {selectedCelebration.approvedBy && (
                         <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Processed by:</span>
-                          <span className="text-sm text-gray-900">{selectedCelebration.approvedBy.name}</span>
+                          <span className="text-sm text-gray-600">
+                            Processed by:
+                          </span>
+                          <span className="text-sm text-gray-900">
+                            {selectedCelebration.approvedBy.name}
+                          </span>
                         </div>
                       )}
                       {selectedCelebration.rejectionReason && (
                         <div>
-                          <span className="text-sm text-gray-600">Rejection Reason:</span>
-                          <p className="text-sm text-gray-900 mt-1 p-2 bg-red-50 rounded">{selectedCelebration.rejectionReason}</p>
+                          <span className="text-sm text-gray-600">
+                            Rejection Reason:
+                          </span>
+                          <p className="text-sm text-gray-900 mt-1 p-2 bg-red-50 rounded">
+                            {selectedCelebration.rejectionReason}
+                          </p>
                         </div>
                       )}
                     </div>
@@ -740,11 +966,14 @@ const CelebrationsManagement = () => {
 
                   {/* Action Buttons */}
                   <div className="space-y-2">
-                    {selectedCelebration.status === 'pending' && (
+                    {selectedCelebration.status === "pending" && (
                       <>
                         <button
                           onClick={() => {
-                            handleStatusChange(selectedCelebration.id, 'approved');
+                            handleStatusChange(
+                              selectedCelebration.id,
+                              "approved"
+                            );
                             setShowDetails(false);
                           }}
                           className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
@@ -754,8 +983,8 @@ const CelebrationsManagement = () => {
                         </button>
                         <button
                           onClick={() => {
-                            const reason = prompt('Please provide a reason for rejection (optional):');
-                            handleStatusChange(selectedCelebration.id, 'rejected', reason || 'Not suitable for church acknowledgment');
+                            setCelebrationToReject(selectedCelebration.id);
+                            setShowRejectionModal(true);
                             setShowDetails(false);
                           }}
                           className="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center"
@@ -773,6 +1002,123 @@ const CelebrationsManagement = () => {
                     </button>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Modal */}
+      {showImageModal && selectedImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+          onClick={() => setShowImageModal(false)}
+        >
+          <div className="relative max-w-4xl max-h-full p-4">
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute top-4 right-4 text-white hover:text-gray-300 text-2xl z-10"
+            >
+              <i className="ri-close-line"></i>
+            </button>
+            <img
+              src={selectedImage}
+              alt="Celebration"
+              className="max-w-full max-h-full object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showConfirmDelete && celebrationToDelete && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3 text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <i className="ri-delete-bin-line text-red-600 text-xl"></i>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mt-2">
+                Delete Celebration
+              </h3>
+              <div className="mt-2 px-7 py-3">
+                <p className="text-sm text-gray-500">
+                  Are you sure you want to delete the celebration for{" "}
+                  <strong>{celebrationToDelete.name}</strong>? This action
+                  cannot be undone.
+                </p>
+              </div>
+              <div className="flex gap-4 px-4 py-3">
+                <button
+                  onClick={() => setShowConfirmDelete(false)}
+                  className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rejection Modal */}
+      {showRejectionModal && celebrationToReject && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Reject Celebration
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowRejectionModal(false);
+                    setCelebrationToReject(null);
+                    setRejectionReason("");
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <i className="ri-close-line text-xl"></i>
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for rejection (optional):
+                </label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Enter reason for rejection..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    setShowRejectionModal(false);
+                    setCelebrationToReject(null);
+                    setRejectionReason("");
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmReject}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Reject
+                </button>
               </div>
             </div>
           </div>
