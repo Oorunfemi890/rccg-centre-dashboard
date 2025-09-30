@@ -84,7 +84,7 @@ const AdminLayout = () => {
         } transition-transform duration-200 ease-in-out`}
       >
         {/* Logo */}
-        <div className="flex items-center justify-between h-16 px-4 bg-blue-600 text-white flex-shrink-0">
+        <div className="flex items-center justify-between h-16 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white flex-shrink-0">
           <Link to="/" className="flex items-center">
             <img src="/img/favicon.png" alt="RCCG Logo" className="h-8 w-8" />
             <span className="ml-2 text-lg font-semibold">RCCG LCC</span>
@@ -106,14 +106,14 @@ const AdminLayout = () => {
               onClick={() => setSidebarOpen(false)}
               className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
                 isActive(item.path)
-                  ? "bg-blue-100 text-blue-700"
+                  ? "bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700"
                   : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               }`}
             >
               <i
                 className={`${item.icon} mr-3 text-lg ${
                   isActive(item.path)
-                    ? "text-blue-700"
+                    ? "text-indigo-700"
                     : "text-gray-400 group-hover:text-gray-500"
                 }`}
               ></i>
@@ -133,8 +133,8 @@ const AdminLayout = () => {
                   className="h-8 w-8 rounded-full object-cover"
                 />
               ) : (
-                <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <i className="ri-user-line text-blue-600"></i>
+                <div className="h-8 w-8 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
+                  <i className="ri-user-line text-indigo-600"></i>
                 </div>
               )}
             </div>
@@ -173,7 +173,7 @@ const AdminLayout = () => {
             {/* Right side actions */}
             <div className="flex items-center space-x-4">
               {/* Notifications */}
-              <button className="p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+              <button className="p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 <i className="ri-notification-line text-xl"></i>
               </button>
 
@@ -181,7 +181,7 @@ const AdminLayout = () => {
               <div className="relative">
                 <button
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   {admin?.avatar ? (
                     <img
@@ -190,8 +190,8 @@ const AdminLayout = () => {
                       className="h-8 w-8 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <i className="ri-user-line text-blue-600"></i>
+                    <div className="h-8 w-8 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
+                      <i className="ri-user-line text-indigo-600"></i>
                     </div>
                   )}
                   <span className="ml-2 text-sm text-gray-700 hidden sm:block">
