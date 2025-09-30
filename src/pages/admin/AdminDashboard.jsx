@@ -70,7 +70,7 @@ const AdminDashboard = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
         <span className="ml-3 text-gray-600">Loading dashboard...</span>
       </div>
     );
@@ -79,19 +79,19 @@ const AdminDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">
               Welcome back, {admin?.name?.split(' ')[0]}!
             </h1>
-            <p className="text-blue-100 mt-1">
+            <p className="text-indigo-100 mt-1">
               Here's what's happening with your church today
             </p>
           </div>
           <div className="hidden sm:block">
             <div className="text-right">
-              <p className="text-blue-100 text-sm">Today</p>
+              <p className="text-indigo-100 text-sm">Today</p>
               <p className="text-xl font-semibold">
                 {new Date().toLocaleDateString('en-US', { 
                   weekday: 'long', 
@@ -109,8 +109,8 @@ const AdminDashboard = () => {
         {/* Total Members */}
         <div className="bg-white rounded-lg shadow-sm border p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <i className="ri-group-line text-blue-600 text-2xl"></i>
+            <div className="p-2 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg">
+              <i className="ri-group-line text-indigo-600 text-2xl"></i>
             </div>
             <div className="ml-4 flex-1">
               <p className="text-sm font-medium text-gray-600">Total Members</p>
@@ -205,7 +205,7 @@ const AdminDashboard = () => {
             <div className="space-y-2">
               <Link 
                 to="/attendance/new" 
-                className="block w-full bg-blue-600 text-white py-2 px-3 rounded text-sm hover:bg-blue-700 transition-colors"
+                className="block w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-2 px-3 rounded text-sm hover:from-indigo-600 hover:to-purple-700 transition-colors"
               >
                 Record Attendance
               </Link>
@@ -260,7 +260,7 @@ const AdminDashboard = () => {
             </h2>
             <Link 
               to="/events" 
-              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+              className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
             >
               View All
             </Link>
@@ -269,7 +269,7 @@ const AdminDashboard = () => {
             {upcomingEvents.length > 0 ? (
               <div className="space-y-4">
                 {upcomingEvents.map((event) => (
-                  <div key={event.id} className="border-l-4 border-blue-500 pl-4">
+                  <div key={event.id} className="border-l-4 border-indigo-500 pl-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-medium text-gray-900 truncate">
@@ -285,7 +285,7 @@ const AdminDashboard = () => {
                       </div>
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                         event.status === 'upcoming' ? 'bg-green-100 text-green-800' :
-                        event.status === 'ongoing' ? 'bg-blue-100 text-blue-800' :
+                        event.status === 'ongoing' ? 'bg-indigo-100 text-indigo-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>
                         {event.status}
@@ -307,10 +307,10 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Link 
             to="/members" 
-            className="flex items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            className="flex items-center p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg hover:from-indigo-100 hover:to-purple-100 transition-colors"
           >
-            <i className="ri-group-line text-blue-600 text-xl mr-3"></i>
-            <span className="text-sm font-medium text-blue-900">Members</span>
+            <i className="ri-group-line text-indigo-600 text-xl mr-3"></i>
+            <span className="text-sm font-medium text-indigo-900">Members</span>
           </Link>
           <Link 
             to="/attendance" 
