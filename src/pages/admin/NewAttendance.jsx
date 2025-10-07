@@ -16,6 +16,7 @@ const NewAttendance = () => {
     youth: '',
     children: '',
     visitors: '',
+    notes: '', // ✅ ADDED: Notes field
     members: []
   });
 
@@ -104,30 +105,51 @@ const NewAttendance = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validation
+    // ✅ ENHANCED: Better validation with detailed error messages
+    if (!formData.date) {
+      toast.error('Please select a date');
+      return;
+    }
+
     if (!formData.serviceType) {
       toast.error('Please select a service type');
       return;
     }
 
-    if (!formData.totalAttendance || parseInt(formData.totalAttendance) < 0) {
-      toast.error('Please enter a valid total attendance');
+    const total = parseInt(formData.totalAttendance);
+    if (!total || total < 0) {
+      toast.error('Please enter a valid total attendance (must be 0 or greater)');
+      return;
+    }
+
+    // Check if breakdown adds up to total
+    const breakdown = (parseInt(formData.adults) || 0) + 
+                     (parseInt(formData.youth) || 0) + 
+                     (parseInt(formData.children) || 0) + 
+                     (parseInt(formData.visitors) || 0);
+    
+    if (breakdown !== total) {
+      toast.error(`Attendance breakdown (${breakdown}) doesn't match total (${total})`);
       return;
     }
 
     try {
       setLoading(true);
 
+      // ✅ FIXED: Proper data structure matching backend expectations
       const attendanceData = {
-        ...formData,
+        date: formData.date,
+        serviceType: formData.serviceType,
         totalAttendance: parseInt(formData.totalAttendance),
         adults: parseInt(formData.adults) || 0,
         youth: parseInt(formData.youth) || 0,
         children: parseInt(formData.children) || 0,
         visitors: parseInt(formData.visitors) || 0,
-        members: selectedMembers,
-        recordedBy: admin?.name || 'Unknown'
+        notes: formData.notes.trim() || '', // ✅ ADDED: Include notes
+        members: selectedMembers.filter(m => m.present) // Only send present members
       };
+
+      console.log('Submitting attendance data:', attendanceData); // ✅ Debug log
 
       const response = await attendanceAPI.createAttendance(attendanceData);
 
@@ -135,11 +157,21 @@ const NewAttendance = () => {
         toast.success('Attendance recorded successfully!');
         navigate('/attendance');
       } else {
-        toast.error(response.message);
+        // ✅ IMPROVED: Show detailed error message
+        const errorMsg = response.message || 'Failed to record attendance';
+        const errors = response.errors;
+        
+        if (errors && Array.isArray(errors)) {
+          errors.forEach(err => {
+            toast.error(err.msg || err.message || err);
+          });
+        } else {
+          toast.error(errorMsg);
+        }
       }
     } catch (error) {
       console.error('Error recording attendance:', error);
-      toast.error('Failed to record attendance');
+      toast.error(error.message || 'Failed to record attendance');
     } finally {
       setLoading(false);
     }
@@ -288,6 +320,25 @@ const NewAttendance = () => {
             <p className="text-sm text-blue-700">
               <i className="ri-information-line mr-2"></i>
               Total attendance is automatically calculated from the breakdown above.
+            </p>
+          </div>
+
+          {/* ✅ ADDED: Notes field */}
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Notes (Optional)
+            </label>
+            <textarea
+              name="notes"
+              value={formData.notes}
+              onChange={handleInputChange}
+              rows={3}
+              maxLength={1000}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Add any additional notes about this service..."
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              {formData.notes.length}/1000 characters
             </p>
           </div>
         </div>

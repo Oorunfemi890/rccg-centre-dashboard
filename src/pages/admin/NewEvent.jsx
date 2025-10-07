@@ -19,12 +19,17 @@ const NewEvent = () => {
     maxAttendees: '',
     isRecurring: false,
     recurringPattern: '',
+    registrationRequired: false, // ✅ ADDED
+    registrationDeadline: '', // ✅ ADDED
+    eventFee: '', // ✅ ADDED
+    tags: [], // ✅ ADDED
     image: null
   });
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [imagePreview, setImagePreview] = useState(null);
+  const [tagInput, setTagInput] = useState(''); // ✅ ADDED for tag management
 
   const eventCategories = [
     'Service',
@@ -94,22 +99,59 @@ const NewEvent = () => {
     }
   };
 
+  // ✅ ADDED: Tag management functions
+  const handleAddTag = () => {
+    if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        tags: [...prev.tags, tagInput.trim()]
+      }));
+      setTagInput('');
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
+    }));
+  };
+
+  const handleTagKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
+    }
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
     // Required fields validation
     if (!formData.title.trim()) {
       newErrors.title = 'Event title is required';
+    } else if (formData.title.length < 3) {
+      newErrors.title = 'Title must be at least 3 characters';
+    } else if (formData.title.length > 200) {
+      newErrors.title = 'Title must not exceed 200 characters';
     }
 
     if (!formData.description.trim()) {
       newErrors.description = 'Event description is required';
+    } else if (formData.description.length < 10) {
+      newErrors.description = 'Description must be at least 10 characters';
     }
 
     if (!formData.date) {
       newErrors.date = 'Event date is required';
-    } else if (new Date(formData.date) < new Date().setHours(0, 0, 0, 0)) {
-      newErrors.date = 'Event date cannot be in the past';
+    } else {
+      const selectedDate = new Date(formData.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (selectedDate < today) {
+        newErrors.date = 'Event date cannot be in the past';
+      }
     }
 
     if (!formData.time) {
@@ -135,13 +177,34 @@ const NewEvent = () => {
     }
 
     // Max attendees validation
-    if (formData.maxAttendees && (parseInt(formData.maxAttendees) < 1 || parseInt(formData.maxAttendees) > 10000)) {
-      newErrors.maxAttendees = 'Max attendees must be between 1 and 10,000';
+    if (formData.maxAttendees) {
+      const max = parseInt(formData.maxAttendees);
+      if (isNaN(max) || max < 1 || max > 50000) {
+        newErrors.maxAttendees = 'Max attendees must be between 1 and 50,000';
+      }
+    }
+
+    // Event fee validation
+    if (formData.eventFee) {
+      const fee = parseFloat(formData.eventFee);
+      if (isNaN(fee) || fee < 0) {
+        newErrors.eventFee = 'Event fee must be 0 or greater';
+      }
     }
 
     // Recurring pattern validation
     if (formData.isRecurring && !formData.recurringPattern) {
       newErrors.recurringPattern = 'Please select a recurring pattern';
+    }
+
+    // Registration deadline validation
+    if (formData.registrationRequired && formData.registrationDeadline) {
+      const deadline = new Date(formData.registrationDeadline);
+      const eventDate = new Date(formData.date);
+      
+      if (deadline > eventDate) {
+        newErrors.registrationDeadline = 'Registration deadline must be before event date';
+      }
     }
 
     setErrors(newErrors);
@@ -153,26 +216,43 @@ const NewEvent = () => {
     
     if (!validateForm()) {
       toast.error('Please fix the errors below');
+      // Scroll to first error
+      const firstError = document.querySelector('.border-red-300');
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
 
     try {
       setLoading(true);
 
+      // ✅ FIXED: Proper data structure matching backend expectations
       const eventData = {
-        ...formData,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        date: formData.date,
+        time: formData.time,
+        endTime: formData.endTime || null,
+        location: formData.location.trim(),
+        category: formData.category,
         maxAttendees: formData.maxAttendees ? parseInt(formData.maxAttendees) : null,
-        organizer: admin?.name || 'Unknown',
-        status: 'upcoming',
-        currentAttendees: 0
+        isRecurring: Boolean(formData.isRecurring),
+        recurringPattern: formData.isRecurring ? formData.recurringPattern : null,
+        registrationRequired: Boolean(formData.registrationRequired),
+        registrationDeadline: formData.registrationDeadline || null,
+        eventFee: formData.eventFee ? parseFloat(formData.eventFee) : 0,
+        tags: formData.tags,
+        image: null // Will be handled separately in production
       };
 
-      // If there's an image, handle it appropriately
+      // Handle image - in production, you would upload to cloud storage
       if (formData.image) {
-        // For mock data, we'll just use a placeholder URL
-        // In production, you would upload the image to a server or cloud storage
-        eventData.image = `/img/events/${formData.image.name}`;
+        // For now, use a placeholder
+        eventData.image = `/uploads/events/${formData.image.name}`;
       }
+
+      console.log('Submitting event data:', eventData); // ✅ Debug log
 
       const response = await eventsAPI.createEvent(eventData);
 
@@ -180,11 +260,21 @@ const NewEvent = () => {
         toast.success('Event created successfully!');
         navigate('/events');
       } else {
-        toast.error(response.message);
+        // ✅ IMPROVED: Show detailed error message
+        const errorMsg = response.message || 'Failed to create event';
+        const errors = response.errors;
+        
+        if (errors && Array.isArray(errors)) {
+          errors.forEach(err => {
+            toast.error(err.msg || err.message || err);
+          });
+        } else {
+          toast.error(errorMsg);
+        }
       }
     } catch (error) {
       console.error('Error creating event:', error);
-      toast.error('Failed to create event');
+      toast.error(error.message || 'Failed to create event');
     } finally {
       setLoading(false);
     }
@@ -356,7 +446,7 @@ const NewEvent = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                End Time
+                End Time (Optional)
               </label>
               <input
                 type="time"
@@ -381,41 +471,85 @@ const NewEvent = () => {
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Additional Settings</h2>
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Maximum Attendees
-              </label>
-              <input
-                type="number"
-                name="maxAttendees"
-                value={formData.maxAttendees}
-                onChange={handleInputChange}
-                min="1"
-                max="10000"
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.maxAttendees ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="Leave empty for no limit"
-              />
-              {errors.maxAttendees && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <i className="ri-error-warning-line mr-1"></i>
-                  {errors.maxAttendees}
-                </p>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Maximum Attendees (Optional)
+                </label>
+                <input
+                  type="number"
+                  name="maxAttendees"
+                  value={formData.maxAttendees}
+                  onChange={handleInputChange}
+                  min="1"
+                  max="50000"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.maxAttendees ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Leave empty for no limit"
+                />
+                {errors.maxAttendees && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <i className="ri-error-warning-line mr-1"></i>
+                    {errors.maxAttendees}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Event Fee (Optional)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-gray-500">₦</span>
+                  <input
+                    type="number"
+                    name="eventFee"
+                    value={formData.eventFee}
+                    onChange={handleInputChange}
+                    min="0"
+                    step="0.01"
+                    className={`w-full pl-8 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      errors.eventFee ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="0.00"
+                  />
+                </div>
+                {errors.eventFee && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <i className="ri-error-warning-line mr-1"></i>
+                    {errors.eventFee}
+                  </p>
+                )}
+              </div>
             </div>
 
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                name="isRecurring"
-                checked={formData.isRecurring}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label className="ml-2 block text-sm text-gray-900">
-                This is a recurring event
-              </label>
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="isRecurring"
+                  checked={formData.isRecurring}
+                  onChange={handleInputChange}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label className="ml-2 block text-sm text-gray-900">
+                  This is a recurring event
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="registrationRequired"
+                  checked={formData.registrationRequired}
+                  onChange={handleInputChange}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label className="ml-2 block text-sm text-gray-900">
+                  Registration required
+                </label>
+              </div>
             </div>
 
             {formData.isRecurring && (
@@ -446,6 +580,73 @@ const NewEvent = () => {
                 )}
               </div>
             )}
+
+            {formData.registrationRequired && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Registration Deadline (Optional)
+                </label>
+                <input
+                  type="date"
+                  name="registrationDeadline"
+                  value={formData.registrationDeadline}
+                  onChange={handleInputChange}
+                  max={formData.date}
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.registrationDeadline ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                />
+                {errors.registrationDeadline && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <i className="ri-error-warning-line mr-1"></i>
+                    {errors.registrationDeadline}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Tags */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tags (Optional)
+              </label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Add a tag and press Enter"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddTag}
+                  className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+              {formData.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {formData.tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(tag)}
+                        className="ml-2 text-blue-600 hover:text-blue-800"
+                      >
+                        <i className="ri-close-line"></i>
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -455,7 +656,7 @@ const NewEvent = () => {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Upload Image
+                Upload Image (Optional)
               </label>
               <input
                 type="file"
@@ -482,7 +683,6 @@ const NewEvent = () => {
                     onClick={() => {
                       setImagePreview(null);
                       setFormData(prev => ({ ...prev, image: null }));
-                      // Clear file input
                       const fileInput = document.querySelector('input[type="file"]');
                       if (fileInput) fileInput.value = '';
                     }}
