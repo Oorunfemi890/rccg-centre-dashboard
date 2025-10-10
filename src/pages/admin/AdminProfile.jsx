@@ -1,31 +1,31 @@
-import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { authAPI } from '@/Services/authApi';
-import { toast } from 'react-toastify';
+import React, { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { authAPI } from "@/Services/authApi";
+import { toast } from "react-toastify";
 
 // Verification Modal Component
-const VerificationModal = ({ 
-  isOpen, 
-  onClose, 
-  onVerify, 
-  title, 
-  description, 
+const VerificationModal = ({
+  isOpen,
+  onClose,
+  onVerify,
+  title,
+  description,
   loading,
-  tokenType = 'profile' // 'profile' or 'password'
+  tokenType = "profile",
 }) => {
-  const [token, setToken] = useState('');
+  const [token, setToken] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (token.length < 10) {
-      toast.error('Please enter a valid verification token');
+      toast.error("Please enter a valid verification token");
       return;
     }
     onVerify(token);
   };
 
   const handleClose = () => {
-    setToken('');
+    setToken("");
     onClose();
   };
 
@@ -34,22 +34,32 @@ const VerificationModal = ({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={handleClose}></div>
-        
+        <div
+          className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
+          onClick={handleClose}
+        ></div>
+
         <div className="inline-block w-full max-w-md p-6 my-8 text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium text-gray-900 flex items-center">
-              <i className={`${tokenType === 'password' ? 'ri-shield-keyhole-line text-red-600' : 'ri-verified-badge-line text-blue-600'} mr-2 text-xl`}></i>
+              <i
+                className={`${
+                  tokenType === "password"
+                    ? "ri-shield-keyhole-line text-red-600"
+                    : "ri-verified-badge-line text-blue-600"
+                } mr-2 text-xl`}
+              ></i>
               {title}
             </h3>
             <button
               onClick={handleClose}
               className="text-gray-400 hover:text-gray-600 transition-colors"
+              disabled={loading}
             >
               <i className="ri-close-line text-xl"></i>
             </button>
           </div>
-          
+
           <div className="mb-4">
             <p className="text-sm text-gray-600">{description}</p>
           </div>
@@ -62,11 +72,12 @@ const VerificationModal = ({
               <input
                 type="text"
                 value={token}
-                onChange={(e) => setToken(e.target.value.replace(/\s/g, ''))}
+                onChange={(e) => setToken(e.target.value.replace(/\s/g, ""))}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-center text-lg tracking-wider"
                 placeholder="Enter verification token"
                 maxLength={64}
                 required
+                disabled={loading}
               />
               <p className="mt-1 text-xs text-gray-500">
                 Check your email for the verification token
@@ -77,7 +88,8 @@ const VerificationModal = ({
               <button
                 type="button"
                 onClick={handleClose}
-                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                disabled={loading}
+                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -85,18 +97,34 @@ const VerificationModal = ({
                 type="submit"
                 disabled={loading || !token}
                 className={`flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                  tokenType === 'password' 
-                    ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' 
-                    : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
+                  tokenType === "password"
+                    ? "bg-red-600 hover:bg-red-700 focus:ring-red-500"
+                    : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
                 } transition-colors flex items-center justify-center`}
               >
                 {loading && (
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                 )}
-                {loading ? 'Verifying...' : 'Verify & Continue'}
+                {loading ? "Verifying..." : "Verify & Continue"}
               </button>
             </div>
           </form>
@@ -108,27 +136,27 @@ const VerificationModal = ({
 
 const AdminProfile = () => {
   const { admin, updateProfile, logout } = useAuth();
-  
+
   const [profileData, setProfileData] = useState({
-    name: admin?.name || '',
-    email: admin?.email || '',
-    phone: admin?.phone || '',
-    position: admin?.position || ''
+    name: admin?.name || "",
+    email: admin?.email || "",
+    phone: admin?.phone || "",
+    position: admin?.position || "",
   });
 
   const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState("profile");
   const [isEditing, setIsEditing] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [profileErrors, setProfileErrors] = useState({});
   const [passwordErrors, setPasswordErrors] = useState({});
-  
+
   // Modal states
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -138,32 +166,30 @@ const AdminProfile = () => {
 
   const handleProfileInputChange = (e) => {
     const { name, value } = e.target;
-    setProfileData(prev => ({
+    setProfileData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
 
-    // Clear error when user starts typing
     if (profileErrors[name]) {
-      setProfileErrors(prev => ({
+      setProfileErrors((prev) => ({
         ...prev,
-        [name]: ''
+        [name]: "",
       }));
     }
   };
 
   const handlePasswordInputChange = (e) => {
     const { name, value } = e.target;
-    setPasswordData(prev => ({
+    setPasswordData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
 
-    // Clear error when user starts typing
     if (passwordErrors[name]) {
-      setPasswordErrors(prev => ({
+      setPasswordErrors((prev) => ({
         ...prev,
-        [name]: ''
+        [name]: "",
       }));
     }
   };
@@ -172,17 +198,19 @@ const AdminProfile = () => {
     const newErrors = {};
 
     if (!profileData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = "Name is required";
+    } else if (profileData.name.trim().length < 2) {
+      newErrors.name = "Name must be at least 2 characters";
     }
 
     if (!profileData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profileData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = "Please enter a valid email address";
     }
 
     if (!profileData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
+      newErrors.phone = "Phone number is required";
     }
 
     setProfileErrors(newErrors);
@@ -193,23 +221,30 @@ const AdminProfile = () => {
     const newErrors = {};
 
     if (!passwordData.currentPassword) {
-      newErrors.currentPassword = 'Current password is required';
+      newErrors.currentPassword = "Current password is required";
+    } else if (passwordData.currentPassword.length < 6) {
+      newErrors.currentPassword = "Password must be at least 6 characters";
     }
 
     if (!passwordData.newPassword) {
-      newErrors.newPassword = 'New password is required';
+      newErrors.newPassword = "New password is required";
     } else if (passwordData.newPassword.length < 6) {
-      newErrors.newPassword = 'Password must be at least 6 characters';
+      newErrors.newPassword = "Password must be at least 6 characters";
     }
 
     if (!passwordData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your new password';
+      newErrors.confirmPassword = "Please confirm your new password";
     } else if (passwordData.newPassword !== passwordData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = "Passwords do not match";
     }
 
-    if (passwordData.currentPassword === passwordData.newPassword) {
-      newErrors.newPassword = 'New password must be different from current password';
+    if (
+      passwordData.currentPassword &&
+      passwordData.newPassword &&
+      passwordData.currentPassword === passwordData.newPassword
+    ) {
+      newErrors.newPassword =
+        "New password must be different from current password";
     }
 
     setPasswordErrors(newErrors);
@@ -220,49 +255,48 @@ const AdminProfile = () => {
     e.preventDefault();
 
     if (!validateProfileForm()) {
-      toast.error('Please fix the errors below');
+      toast.error("Please fix the errors in the form");
       return;
     }
 
-    // Check if email is being changed
-    const emailChanged = profileData.email.toLowerCase() !== admin.email.toLowerCase();
-    
+    const emailChanged =
+      profileData.email.toLowerCase() !== admin.email.toLowerCase();
+
     if (emailChanged) {
-      // Store profile data and request verification token
       setPendingProfileData(profileData);
-      
+
       try {
         setProfileLoading(true);
-        const response = await authAPI.requestProfileUpdate('email');
-        
+        const response = await authAPI.requestProfileUpdate("email");
+
         if (response.success) {
           setShowVerificationModal(true);
-          toast.success('Verification token sent to your email. Please check your inbox.');
+          toast.success("Verification token sent to your email");
         } else {
-          toast.error(response.message);
+          toast.error(response.message || "Failed to send verification token");
         }
       } catch (error) {
-        console.error('Error requesting profile update:', error);
-        toast.error('Failed to request profile update verification');
+        console.error("Error requesting profile update:", error);
+        toast.error(error.message || "Failed to request profile update");
       } finally {
         setProfileLoading(false);
       }
     } else {
-      // No email change, update directly
       try {
         setProfileLoading(true);
         const result = await updateProfile({
-          id: admin.id,
-          ...profileData
+          ...profileData,
         });
 
         if (result.success) {
           setIsEditing(false);
-          toast.success('Profile updated successfully!');
+          toast.success("Profile updated successfully!");
+        } else {
+          toast.error(result.message || "Failed to update profile");
         }
       } catch (error) {
-        console.error('Error updating profile:', error);
-        toast.error('Failed to update profile');
+        console.error("Error updating profile:", error);
+        toast.error(error.message || "Failed to update profile");
       } finally {
         setProfileLoading(false);
       }
@@ -273,58 +307,61 @@ const AdminProfile = () => {
     e.preventDefault();
 
     if (!validatePasswordForm()) {
-      toast.error('Please fix the errors below');
+      toast.error("Please fix the errors in the form");
       return;
     }
 
     try {
       setPasswordLoading(true);
-      setPendingPasswordData(passwordData);
 
-      // Request password change verification token
-      const response = await authAPI.requestPasswordChange(passwordData.currentPassword);
+      console.log("Requesting password change verification...");
+
+      const response = await authAPI.requestPasswordChange(
+        passwordData.currentPassword
+      );
+
+      console.log("Password change request response:", response);
 
       if (response.success) {
+        setPendingPasswordData(passwordData);
         setShowPasswordModal(true);
-        toast.success('Password change verification token sent to your email');
+        toast.success(
+          "Verification token sent to your email. Check your inbox!"
+        );
       } else {
-        toast.error(response.message);
+        toast.error(response.message || "Failed to send verification token");
+        console.error("Password change request failed:", response);
       }
     } catch (error) {
-      console.error('Error requesting password change:', error);
-      toast.error('Failed to request password change verification');
+      console.error("Error requesting password change:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to request password change";
+      toast.error(errorMessage);
     } finally {
       setPasswordLoading(false);
     }
   };
 
-  // FIXED: Enhanced profile verification with better error handling
   const handleProfileVerification = async (token) => {
     if (!pendingProfileData) {
-      toast.error('No pending profile data found. Please try again.');
+      toast.error("No pending profile data. Please try again.");
+      setShowVerificationModal(false);
       return;
     }
 
     try {
       setVerificationLoading(true);
 
-      // FIXED: Log what we're sending for debugging
-      console.log('Attempting profile verification:', {
-        hasId: !!admin.id,
-        hasName: !!pendingProfileData.name,
-        hasEmail: !!pendingProfileData.email,
-        hasToken: !!token,
-        tokenLength: token?.length,
-        emailChange: pendingProfileData.email !== admin.email
-      });
+      console.log("Verifying profile update with token...");
 
-      // FIXED: Ensure we have all required data
       const updateData = {
         name: pendingProfileData.name,
         email: pendingProfileData.email,
         phone: pendingProfileData.phone,
         position: pendingProfileData.position,
-        token: token.trim() // Ensure token is trimmed
+        token: token.trim(),
       };
 
       const result = await updateProfile(updateData);
@@ -333,14 +370,14 @@ const AdminProfile = () => {
         setShowVerificationModal(false);
         setIsEditing(false);
         setPendingProfileData(null);
-        toast.success('Profile updated successfully! Email address changed.');
+        toast.success("Profile updated successfully! Email address changed.");
       } else {
-        console.error('Profile update failed:', result);
-        toast.error(result.message || 'Profile verification failed');
+        toast.error(result.message || "Verification failed");
       }
     } catch (error) {
-      console.error('Error verifying profile update:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Profile verification failed';
+      console.error("Profile verification error:", error);
+      const errorMessage =
+        error.response?.data?.message || error.message || "Verification failed";
       toast.error(errorMessage);
     } finally {
       setVerificationLoading(false);
@@ -348,38 +385,52 @@ const AdminProfile = () => {
   };
 
   const handlePasswordVerification = async (token) => {
-    if (!pendingPasswordData) return;
+    if (!pendingPasswordData) {
+      toast.error("No pending password data. Please try again.");
+      setShowPasswordModal(false);
+      return;
+    }
 
     try {
       setVerificationLoading(true);
 
+      console.log("Verifying password change with token...");
+
       const response = await authAPI.changePassword({
         token: token.trim(),
-        newPassword: pendingPasswordData.newPassword
+        newPassword: pendingPasswordData.newPassword,
       });
+
+      console.log("Password change response:", response);
 
       if (response.success) {
         setShowPasswordModal(false);
         setPendingPasswordData(null);
         setPasswordData({
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
         });
-        
-        toast.success('Password changed successfully! You will be logged out.');
-        
-        // Auto logout after password change
+
+        toast.success(
+          "Password changed successfully! Logging out in 3 seconds...",
+          {
+            autoClose: 3000,
+          }
+        );
+
         setTimeout(async () => {
           await logout();
-          window.location.href = '/login';
-        }, 2000);
+          window.location.href = "/login";
+        }, 3000);
       } else {
-        toast.error(response.message);
+        toast.error(response.message || "Password change failed");
       }
     } catch (error) {
-      console.error('Error verifying password change:', error);
-      toast.error('Password verification failed');
+      console.error("Password verification error:", error);
+      const errorMessage =
+        error.response?.data?.message || error.message || "Verification failed";
+      toast.error(errorMessage);
     } finally {
       setVerificationLoading(false);
     }
@@ -387,24 +438,24 @@ const AdminProfile = () => {
 
   const handleCancelEdit = () => {
     setProfileData({
-      name: admin?.name || '',
-      email: admin?.email || '',
-      phone: admin?.phone || '',
-      position: admin?.position || ''
+      name: admin?.name || "",
+      email: admin?.email || "",
+      phone: admin?.phone || "",
+      position: admin?.position || "",
     });
     setProfileErrors({});
     setIsEditing(false);
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'Not available';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    if (!dateString) return "Not available";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -414,11 +465,15 @@ const AdminProfile = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
-            <p className="text-gray-600 mt-1">Manage your account settings and preferences</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Profile Settings
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Manage your account settings and preferences
+            </p>
           </div>
-          
-          {activeTab === 'profile' && (
+
+          {activeTab === "profile" && (
             <div className="flex space-x-3">
               {!isEditing ? (
                 <button
@@ -448,9 +503,9 @@ const AdminProfile = () => {
           <div className="flex items-center space-x-4">
             <div className="flex-shrink-0">
               {admin?.avatar ? (
-                <img 
-                  src={admin.avatar} 
-                  alt={admin.name} 
+                <img
+                  src={admin.avatar}
+                  alt={admin.name}
                   className="h-20 w-20 rounded-full object-cover ring-4 ring-gray-100"
                 />
               ) : (
@@ -466,7 +521,7 @@ const AdminProfile = () => {
               <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
                 <span className="flex items-center">
                   <i className="ri-shield-check-line mr-1 text-green-500"></i>
-                  {admin?.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                  {admin?.role === "super_admin" ? "Super Admin" : "Admin"}
                 </span>
                 <span className="flex items-center">
                   <i className="ri-calendar-line mr-1"></i>
@@ -475,15 +530,19 @@ const AdminProfile = () => {
               </div>
             </div>
             <div className="flex-shrink-0">
-              <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                admin?.isActive 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-red-100 text-red-800'
-              }`}>
-                <div className={`w-2 h-2 rounded-full mr-2 ${
-                  admin?.isActive ? 'bg-green-400' : 'bg-red-400'
-                }`}></div>
-                {admin?.isActive ? 'Active' : 'Inactive'}
+              <div
+                className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                  admin?.isActive
+                    ? "bg-green-100 text-green-800"
+                    : "bg-red-100 text-red-800"
+                }`}
+              >
+                <div
+                  className={`w-2 h-2 rounded-full mr-2 ${
+                    admin?.isActive ? "bg-green-400" : "bg-red-400"
+                  }`}
+                ></div>
+                {admin?.isActive ? "Active" : "Inactive"}
               </div>
             </div>
           </div>
@@ -494,33 +553,33 @@ const AdminProfile = () => {
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8 px-6">
               <button
-                onClick={() => setActiveTab('profile')}
+                onClick={() => setActiveTab("profile")}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'profile'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  activeTab === "profile"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
                 <i className="ri-user-line mr-2"></i>
                 Profile Information
               </button>
               <button
-                onClick={() => setActiveTab('security')}
+                onClick={() => setActiveTab("security")}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'security'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  activeTab === "security"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
                 <i className="ri-shield-keyhole-line mr-2"></i>
                 Security
               </button>
               <button
-                onClick={() => setActiveTab('activity')}
+                onClick={() => setActiveTab("activity")}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'activity'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  activeTab === "activity"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
                 <i className="ri-history-line mr-2"></i>
@@ -531,10 +590,12 @@ const AdminProfile = () => {
 
           <div className="p-6">
             {/* Profile Information Tab */}
-            {activeTab === 'profile' && (
+            {activeTab === "profile" && (
               <form onSubmit={handleProfileSubmit} className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Personal Information</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    Personal Information
+                  </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -547,7 +608,9 @@ const AdminProfile = () => {
                           value={profileData.name}
                           onChange={handleProfileInputChange}
                           className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                            profileErrors.name ? 'border-red-300' : 'border-gray-300'
+                            profileErrors.name
+                              ? "border-red-300"
+                              : "border-gray-300"
                           }`}
                           placeholder="Enter your full name"
                         />
@@ -566,10 +629,14 @@ const AdminProfile = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email Address * 
-                        {isEditing && profileData.email.toLowerCase() !== admin?.email.toLowerCase() && (
-                          <span className="text-yellow-600 text-xs ml-1">(Will require verification)</span>
-                        )}
+                        Email Address *
+                        {isEditing &&
+                          profileData.email.toLowerCase() !==
+                            admin?.email.toLowerCase() && (
+                            <span className="text-yellow-600 text-xs ml-1">
+                              (Will require verification)
+                            </span>
+                          )}
                       </label>
                       {isEditing ? (
                         <input
@@ -578,7 +645,9 @@ const AdminProfile = () => {
                           value={profileData.email}
                           onChange={handleProfileInputChange}
                           className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                            profileErrors.email ? 'border-red-300' : 'border-gray-300'
+                            profileErrors.email
+                              ? "border-red-300"
+                              : "border-gray-300"
                           }`}
                           placeholder="Enter your email address"
                         />
@@ -606,7 +675,9 @@ const AdminProfile = () => {
                           value={profileData.phone}
                           onChange={handleProfileInputChange}
                           className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                            profileErrors.phone ? 'border-red-300' : 'border-gray-300'
+                            profileErrors.phone
+                              ? "border-red-300"
+                              : "border-gray-300"
                           }`}
                           placeholder="Enter your phone number"
                         />
@@ -638,7 +709,7 @@ const AdminProfile = () => {
                         />
                       ) : (
                         <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
-                          {profileData.position || 'Not specified'}
+                          {profileData.position || "Not specified"}
                         </div>
                       )}
                     </div>
@@ -653,12 +724,28 @@ const AdminProfile = () => {
                       className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
                     >
                       {profileLoading && (
-                        <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <svg
+                          className="animate-spin -ml-1 mr-3 h-4 w-4 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
                         </svg>
                       )}
-                      {profileLoading ? 'Updating...' : 'Update Profile'}
+                      {profileLoading ? "Updating..." : "Update Profile"}
                     </button>
                   </div>
                 )}
@@ -666,20 +753,33 @@ const AdminProfile = () => {
             )}
 
             {/* Security Tab */}
-            {activeTab === 'security' && (
+            {activeTab === "security" && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Change Password</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    Change Password
+                  </h3>
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
                     <div className="flex">
-                      <i className="ri-information-line text-yellow-600 mr-2 mt-0.5"></i>
+                      <i className="ri-information-line text-yellow-600 mr-2 mt-0.5 text-lg flex-shrink-0"></i>
                       <div className="text-sm text-yellow-800">
-                        <p><strong>Security Notice:</strong> Changing your password will require email verification and will log you out of all devices.</p>
+                        <p className="font-medium mb-1">Security Notice:</p>
+                        <ul className="list-disc list-inside space-y-1">
+                          <li>
+                            Changing your password requires email verification
+                          </li>
+                          <li>You will be logged out of all devices</li>
+                          <li>Check your email for the verification token</li>
+                          <li>Token expires in 15 minutes</li>
+                        </ul>
                       </div>
                     </div>
                   </div>
-                  
-                  <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-md">
+
+                  <form
+                    onSubmit={handlePasswordSubmit}
+                    className="space-y-4 max-w-md"
+                  >
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Current Password *
@@ -690,9 +790,12 @@ const AdminProfile = () => {
                         value={passwordData.currentPassword}
                         onChange={handlePasswordInputChange}
                         className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          passwordErrors.currentPassword ? 'border-red-300' : 'border-gray-300'
+                          passwordErrors.currentPassword
+                            ? "border-red-300"
+                            : "border-gray-300"
                         }`}
                         placeholder="Enter your current password"
+                        autoComplete="current-password"
                       />
                       {passwordErrors.currentPassword && (
                         <p className="mt-1 text-sm text-red-600 flex items-center">
@@ -712,9 +815,12 @@ const AdminProfile = () => {
                         value={passwordData.newPassword}
                         onChange={handlePasswordInputChange}
                         className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          passwordErrors.newPassword ? 'border-red-300' : 'border-gray-300'
+                          passwordErrors.newPassword
+                            ? "border-red-300"
+                            : "border-gray-300"
                         }`}
                         placeholder="Enter your new password"
+                        autoComplete="new-password"
                       />
                       {passwordErrors.newPassword && (
                         <p className="mt-1 text-sm text-red-600 flex items-center">
@@ -734,9 +840,12 @@ const AdminProfile = () => {
                         value={passwordData.confirmPassword}
                         onChange={handlePasswordInputChange}
                         className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          passwordErrors.confirmPassword ? 'border-red-300' : 'border-gray-300'
+                          passwordErrors.confirmPassword
+                            ? "border-red-300"
+                            : "border-gray-300"
                         }`}
                         placeholder="Confirm your new password"
+                        autoComplete="new-password"
                       />
                       {passwordErrors.confirmPassword && (
                         <p className="mt-1 text-sm text-red-600 flex items-center">
@@ -753,13 +862,29 @@ const AdminProfile = () => {
                         className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
                       >
                         {passwordLoading && (
-                          <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <svg
+                            className="animate-spin -ml-1 mr-3 h-4 w-4 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
                           </svg>
                         )}
                         <i className="ri-shield-keyhole-line mr-2"></i>
-                        {passwordLoading ? 'Processing...' : 'Change Password'}
+                        {passwordLoading ? "Processing..." : "Change Password"}
                       </button>
                     </div>
                   </form>
@@ -775,22 +900,32 @@ const AdminProfile = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Account Type:</span>
                       <span className="font-medium text-gray-900">
-                        {admin?.role === 'super_admin' ? 'Super Administrator' : 'Administrator'}
+                        {admin?.role === "super_admin"
+                          ? "Super Administrator"
+                          : "Administrator"}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Last Login:</span>
-                      <span className="font-medium text-gray-900">{formatDate(admin?.lastLogin)}</span>
+                      <span className="font-medium text-gray-900">
+                        {formatDate(admin?.lastLogin)}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Account Status:</span>
-                      <span className={`font-medium ${admin?.isActive ? 'text-green-600' : 'text-red-600'}`}>
-                        {admin?.isActive ? 'Active' : 'Inactive'}
+                      <span
+                        className={`font-medium ${
+                          admin?.isActive ? "text-green-600" : "text-red-600"
+                        }`}
+                      >
+                        {admin?.isActive ? "Active" : "Inactive"}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Two-Factor Auth:</span>
-                      <span className="font-medium text-gray-500">Not Enabled</span>
+                      <span className="font-medium text-gray-500">
+                        Not Enabled
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -798,9 +933,11 @@ const AdminProfile = () => {
             )}
 
             {/* Activity Log Tab */}
-            {activeTab === 'activity' && (
+            {activeTab === "activity" && (
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Activity</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Recent Activity
+                </h3>
                 <div className="space-y-4">
                   <div className="border-l-4 border-blue-500 pl-4 pb-4">
                     <div className="flex items-center justify-between">
@@ -809,12 +946,16 @@ const AdminProfile = () => {
                           <i className="ri-user-settings-line mr-2 text-blue-600"></i>
                           Profile Updated
                         </p>
-                        <p className="text-sm text-gray-600">Personal information was updated</p>
+                        <p className="text-sm text-gray-600">
+                          Personal information was updated
+                        </p>
                       </div>
-                      <span className="text-xs text-gray-500">{formatDate(admin?.updatedAt)}</span>
+                      <span className="text-xs text-gray-500">
+                        {formatDate(admin?.updatedAt)}
+                      </span>
                     </div>
                   </div>
-                  
+
                   <div className="border-l-4 border-green-500 pl-4 pb-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -822,9 +963,13 @@ const AdminProfile = () => {
                           <i className="ri-login-circle-line mr-2 text-green-600"></i>
                           Successful Login
                         </p>
-                        <p className="text-sm text-gray-600">Logged in to admin dashboard</p>
+                        <p className="text-sm text-gray-600">
+                          Logged in to admin dashboard
+                        </p>
                       </div>
-                      <span className="text-xs text-gray-500">{formatDate(admin?.lastLogin)}</span>
+                      <span className="text-xs text-gray-500">
+                        {formatDate(admin?.lastLogin)}
+                      </span>
                     </div>
                   </div>
 
@@ -835,9 +980,13 @@ const AdminProfile = () => {
                           <i className="ri-user-add-line mr-2 text-purple-600"></i>
                           Account Created
                         </p>
-                        <p className="text-sm text-gray-600">Administrator account was created</p>
+                        <p className="text-sm text-gray-600">
+                          Administrator account was created
+                        </p>
                       </div>
-                      <span className="text-xs text-gray-500">{formatDate(admin?.createdAt)}</span>
+                      <span className="text-xs text-gray-500">
+                        {formatDate(admin?.createdAt)}
+                      </span>
                     </div>
                   </div>
                 </div>
