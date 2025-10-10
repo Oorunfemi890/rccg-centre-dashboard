@@ -1,29 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { attendanceAPI } from '@/Services/attendanceAPI';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'react-toastify';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { attendanceAPI } from "@/Services/attendanceAPI";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "react-toastify";
 
 const EditAttendance = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { admin } = useAuth();
-  
+
   const [formData, setFormData] = useState({
-    date: '',
-    serviceType: '',
-    totalAttendance: '',
-    adults: '',
-    youth: '',
-    children: '',
-    visitors: '',
-    members: []
+    date: "",
+    serviceType: "",
+    totalAttendance: "",
+    adults: "",
+    youth: "",
+    children: "",
+    visitors: "",
+    notes: "",
+    members: [],
   });
 
   const [originalData, setOriginalData] = useState(null);
   const [serviceTypes, setServiceTypes] = useState([]);
   const [availableMembers, setAvailableMembers] = useState([]);
-  const [memberSearchTerm, setMemberSearchTerm] = useState('');
+  const [memberSearchTerm, setMemberSearchTerm] = useState("");
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,13 +43,13 @@ const EditAttendance = () => {
     const youth = parseInt(formData.youth) || 0;
     const children = parseInt(formData.children) || 0;
     const visitors = parseInt(formData.visitors) || 0;
-    
+
     const calculatedTotal = adults + youth + children + visitors;
-    
+
     if (calculatedTotal !== parseInt(formData.totalAttendance)) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        totalAttendance: calculatedTotal.toString()
+        totalAttendance: calculatedTotal.toString(),
       }));
     }
   }, [formData.adults, formData.youth, formData.children, formData.visitors]);
@@ -57,7 +58,7 @@ const EditAttendance = () => {
     try {
       setLoading(true);
       const response = await attendanceAPI.getAttendanceById(id);
-      
+
       if (response.success) {
         const record = response.data;
         setOriginalData(record);
@@ -69,21 +70,22 @@ const EditAttendance = () => {
           youth: record.youth.toString(),
           children: record.children.toString(),
           visitors: record.visitors.toString(),
-          members: record.members || []
+          notes: record.notes || "",
+          members: record.members || [],
         });
-        
+
         // Show member selection if there are members in the record
         if (record.members && record.members.length > 0) {
           setShowMemberSelection(true);
         }
       } else {
         toast.error(response.message);
-        navigate('/attendance');
+        navigate("/attendance");
       }
     } catch (error) {
-      console.error('Error fetching attendance record:', error);
-      toast.error('Failed to load attendance record');
-      navigate('/attendance');
+      console.error("Error fetching attendance record:", error);
+      toast.error("Failed to load attendance record");
+      navigate("/attendance");
     } finally {
       setLoading(false);
     }
@@ -96,7 +98,7 @@ const EditAttendance = () => {
         setServiceTypes(response.data);
       }
     } catch (error) {
-      console.error('Error fetching service types:', error);
+      console.error("Error fetching service types:", error);
     }
   };
 
@@ -106,22 +108,25 @@ const EditAttendance = () => {
       const response = await attendanceAPI.getMembersForAttendance();
       if (response.success) {
         setAvailableMembers(response.data);
-        
+
         // Initialize member attendance tracking with existing data
-        const memberAttendance = response.data.map(member => {
-          const existingRecord = formData.members.find(m => m.memberId === member.id);
+        const memberAttendance = response.data.map((member) => {
+          const existingRecord = formData.members.find(
+            (m) => m.memberId === member.id
+          );
           return {
             memberId: member.id,
             name: member.name,
+            department: member.department,
             present: existingRecord ? existingRecord.present : false,
-            timeArrived: existingRecord ? existingRecord.timeArrived : ''
+            timeArrived: existingRecord ? existingRecord.timeArrived || "" : "",
           };
         });
         setSelectedMembers(memberAttendance);
       }
     } catch (error) {
-      console.error('Error fetching members:', error);
-      toast.error('Failed to load members');
+      console.error("Error fetching members:", error);
+      toast.error("Failed to load members");
     } finally {
       setLoadingMembers(false);
     }
@@ -129,18 +134,16 @@ const EditAttendance = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleMemberAttendanceChange = (memberId, field, value) => {
-    setSelectedMembers(prev =>
-      prev.map(member =>
-        member.memberId === memberId
-          ? { ...member, [field]: value }
-          : member
+    setSelectedMembers((prev) =>
+      prev.map((member) =>
+        member.memberId === memberId ? { ...member, [field]: value } : member
       )
     );
   };
@@ -150,46 +153,62 @@ const EditAttendance = () => {
 
     // Validation
     if (!formData.serviceType) {
-      toast.error('Please select a service type');
+      toast.error("Please select a service type");
       return;
     }
 
     if (!formData.totalAttendance || parseInt(formData.totalAttendance) < 0) {
-      toast.error('Please enter a valid total attendance');
+      toast.error("Please enter a valid total attendance");
       return;
     }
 
     try {
       setSaving(true);
 
+      // ✅ FIXED: Only send present members, timeArrived is optional
+      const presentMembers = selectedMembers
+        .filter((m) => m.present === true)
+        .map((member) => ({
+          memberId: member.memberId,
+          present: true,
+          timeArrived: member.timeArrived || null, // ✅ Optional
+          notes: null,
+        }));
+
       const attendanceData = {
-        ...formData,
+        date: formData.date,
+        serviceType: formData.serviceType,
         totalAttendance: parseInt(formData.totalAttendance),
         adults: parseInt(formData.adults) || 0,
         youth: parseInt(formData.youth) || 0,
         children: parseInt(formData.children) || 0,
         visitors: parseInt(formData.visitors) || 0,
-        members: selectedMembers
+        notes: formData.notes || "",
+        members: presentMembers,
       };
 
       const response = await attendanceAPI.updateAttendance(id, attendanceData);
 
       if (response.success) {
-        toast.success('Attendance updated successfully!');
-        navigate('/attendance');
+        toast.success("Attendance updated successfully!");
+        navigate("/attendance");
       } else {
         toast.error(response.message);
       }
     } catch (error) {
-      console.error('Error updating attendance:', error);
-      toast.error('Failed to update attendance');
+      console.error("Error updating attendance:", error);
+      toast.error("Failed to update attendance");
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this attendance record? This action cannot be undone.')) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this attendance record? This action cannot be undone."
+      )
+    ) {
       return;
     }
 
@@ -198,24 +217,24 @@ const EditAttendance = () => {
       const response = await attendanceAPI.deleteAttendance(id);
 
       if (response.success) {
-        toast.success('Attendance record deleted successfully!');
-        navigate('/attendance');
+        toast.success("Attendance record deleted successfully!");
+        navigate("/attendance");
       } else {
         toast.error(response.message);
       }
     } catch (error) {
-      console.error('Error deleting attendance:', error);
-      toast.error('Failed to delete attendance record');
+      console.error("Error deleting attendance:", error);
+      toast.error("Failed to delete attendance record");
     } finally {
       setSaving(false);
     }
   };
 
-  const filteredMembers = availableMembers.filter(member =>
+  const filteredMembers = availableMembers.filter((member) =>
     member.name.toLowerCase().includes(memberSearchTerm.toLowerCase())
   );
 
-  const presentCount = selectedMembers.filter(m => m.present).length;
+  const presentCount = selectedMembers.filter((m) => m.present).length;
   const absentCount = selectedMembers.length - presentCount;
 
   if (loading) {
@@ -234,7 +253,8 @@ const EditAttendance = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Edit Attendance</h1>
           <p className="text-gray-600 mt-1">
-            Editing attendance for {originalData?.serviceType} on {new Date(originalData?.date).toLocaleDateString()}
+            Editing attendance for {originalData?.serviceType} on{" "}
+            {new Date(originalData?.date).toLocaleDateString()}
           </p>
         </div>
         <div className="flex space-x-2">
@@ -247,7 +267,7 @@ const EditAttendance = () => {
             Delete Record
           </button>
           <button
-            onClick={() => navigate('/attendance')}
+            onClick={() => navigate("/attendance")}
             className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
           >
             <i className="ri-arrow-left-line mr-2"></i>
@@ -259,7 +279,9 @@ const EditAttendance = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Information */}
         <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Service Information</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Service Information
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -286,8 +308,10 @@ const EditAttendance = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Select Service Type</option>
-                {serviceTypes.map(type => (
-                  <option key={type} value={type}>{type}</option>
+                {serviceTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
                 ))}
               </select>
             </div>
@@ -296,7 +320,9 @@ const EditAttendance = () => {
 
         {/* Attendance Numbers */}
         <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Attendance Count</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Attendance Count
+          </h2>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -374,7 +400,27 @@ const EditAttendance = () => {
           <div className="mt-4 p-3 bg-blue-50 rounded-lg">
             <p className="text-sm text-blue-700">
               <i className="ri-information-line mr-2"></i>
-              Total attendance is automatically calculated from the breakdown above.
+              Total attendance is automatically calculated from the breakdown
+              above.
+            </p>
+          </div>
+
+          {/* Notes field */}
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Notes (Optional)
+            </label>
+            <textarea
+              name="notes"
+              value={formData.notes}
+              onChange={handleInputChange}
+              rows={3}
+              maxLength={1000}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Add any additional notes about this service..."
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              {formData.notes.length}/1000 characters
             </p>
           </div>
         </div>
@@ -383,19 +429,23 @@ const EditAttendance = () => {
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Member Attendance</h2>
-              <p className="text-sm text-gray-600">Track individual member attendance (optional)</p>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Member Attendance
+              </h2>
+              <p className="text-sm text-gray-600">
+                Track individual member attendance (optional)
+              </p>
             </div>
             <button
               type="button"
               onClick={() => setShowMemberSelection(!showMemberSelection)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                showMemberSelection 
-                  ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                showMemberSelection
+                  ? "bg-red-100 text-red-700 hover:bg-red-200"
+                  : "bg-blue-100 text-blue-700 hover:bg-blue-200"
               }`}
             >
-              {showMemberSelection ? 'Hide Members' : 'Track Members'}
+              {showMemberSelection ? "Hide Members" : "Track Members"}
             </button>
           </div>
 
@@ -434,29 +484,52 @@ const EditAttendance = () => {
               ) : (
                 <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
                   <div className="space-y-1 p-2">
-                    {filteredMembers.map(member => {
-                      const memberAttendance = selectedMembers.find(m => m.memberId === member.id);
+                    {filteredMembers.map((member) => {
+                      const memberAttendance = selectedMembers.find(
+                        (m) => m.memberId === member.id
+                      );
                       return (
-                        <div key={member.id} className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg hover:bg-gray-50">
-                          <div className="flex items-center">
+                        <div
+                          key={member.id}
+                          className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg hover:bg-gray-50"
+                        >
+                          <div className="flex items-center flex-1">
                             <input
                               type="checkbox"
                               checked={memberAttendance?.present || false}
-                              onChange={(e) => handleMemberAttendanceChange(member.id, 'present', e.target.checked)}
+                              onChange={(e) =>
+                                handleMemberAttendanceChange(
+                                  member.id,
+                                  "present",
+                                  e.target.checked
+                                )
+                              }
                               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                             />
                             <div className="ml-3">
-                              <p className="text-sm font-medium text-gray-900">{member.name}</p>
-                              <p className="text-xs text-gray-500">{member.department}</p>
+                              <p className="text-sm font-medium text-gray-900">
+                                {member.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {member.department}
+                              </p>
                             </div>
                           </div>
                           {memberAttendance?.present && (
-                            <div className="flex items-center">
-                              <label className="text-xs text-gray-600 mr-2">Arrival time:</label>
+                            <div className="flex items-center ml-4">
+                              <label className="text-xs text-gray-600 mr-2">
+                                Arrival time (optional):
+                              </label>
                               <input
                                 type="time"
-                                value={memberAttendance.timeArrived}
-                                onChange={(e) => handleMemberAttendanceChange(member.id, 'timeArrived', e.target.value)}
+                                value={memberAttendance.timeArrived || ""}
+                                onChange={(e) =>
+                                  handleMemberAttendanceChange(
+                                    member.id,
+                                    "timeArrived",
+                                    e.target.value
+                                  )
+                                }
                                 className="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
                               />
                             </div>
@@ -465,10 +538,12 @@ const EditAttendance = () => {
                       );
                     })}
                   </div>
-                  
+
                   {filteredMembers.length === 0 && (
                     <div className="text-center py-8">
-                      <p className="text-gray-500">No members found matching your search.</p>
+                      <p className="text-gray-500">
+                        No members found matching your search.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -481,7 +556,7 @@ const EditAttendance = () => {
         <div className="flex justify-end space-x-3">
           <button
             type="button"
-            onClick={() => navigate('/attendance')}
+            onClick={() => navigate("/attendance")}
             className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancel
@@ -492,12 +567,28 @@ const EditAttendance = () => {
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
           >
             {saving && (
-              <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <svg
+                className="animate-spin -ml-1 mr-3 h-4 w-4 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
             )}
-            {saving ? 'Updating...' : 'Update Attendance'}
+            {saving ? "Updating..." : "Update Attendance"}
           </button>
         </div>
       </form>

@@ -1,28 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { attendanceAPI } from '@/Services/attendanceAPI';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'react-toastify';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { attendanceAPI } from "@/Services/attendanceAPI";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "react-toastify";
 
 const NewAttendance = () => {
   const navigate = useNavigate();
   const { admin } = useAuth();
-  
+
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    serviceType: '',
-    totalAttendance: '',
-    adults: '',
-    youth: '',
-    children: '',
-    visitors: '',
-    notes: '', // ✅ ADDED: Notes field
-    members: []
+    date: new Date().toISOString().split("T")[0],
+    serviceType: "",
+    totalAttendance: "",
+    adults: "",
+    youth: "",
+    children: "",
+    visitors: "",
+    notes: "",
+    members: [],
   });
 
   const [serviceTypes, setServiceTypes] = useState([]);
   const [availableMembers, setAvailableMembers] = useState([]);
-  const [memberSearchTerm, setMemberSearchTerm] = useState('');
+  const [memberSearchTerm, setMemberSearchTerm] = useState("");
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
@@ -39,13 +39,13 @@ const NewAttendance = () => {
     const youth = parseInt(formData.youth) || 0;
     const children = parseInt(formData.children) || 0;
     const visitors = parseInt(formData.visitors) || 0;
-    
+
     const calculatedTotal = adults + youth + children + visitors;
-    
+
     if (calculatedTotal !== parseInt(formData.totalAttendance)) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        totalAttendance: calculatedTotal.toString()
+        totalAttendance: calculatedTotal.toString(),
       }));
     }
   }, [formData.adults, formData.youth, formData.children, formData.visitors]);
@@ -57,7 +57,7 @@ const NewAttendance = () => {
         setServiceTypes(response.data);
       }
     } catch (error) {
-      console.error('Error fetching service types:', error);
+      console.error("Error fetching service types:", error);
     }
   };
 
@@ -68,17 +68,18 @@ const NewAttendance = () => {
       if (response.success) {
         setAvailableMembers(response.data);
         // Initialize member attendance tracking
-        const memberAttendance = response.data.map(member => ({
+        const memberAttendance = response.data.map((member) => ({
           memberId: member.id,
           name: member.name,
+          department: member.department,
           present: false,
-          timeArrived: ''
+          timeArrived: "",
         }));
         setSelectedMembers(memberAttendance);
       }
     } catch (error) {
-      console.error('Error fetching members:', error);
-      toast.error('Failed to load members');
+      console.error("Error fetching members:", error);
+      toast.error("Failed to load members");
     } finally {
       setLoadingMembers(false);
     }
@@ -86,18 +87,16 @@ const NewAttendance = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleMemberAttendanceChange = (memberId, field, value) => {
-    setSelectedMembers(prev =>
-      prev.map(member =>
-        member.memberId === memberId
-          ? { ...member, [field]: value }
-          : member
+    setSelectedMembers((prev) =>
+      prev.map((member) =>
+        member.memberId === memberId ? { ...member, [field]: value } : member
       )
     );
   };
@@ -105,38 +104,52 @@ const NewAttendance = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // ✅ ENHANCED: Better validation with detailed error messages
+    // ✅ Validation
     if (!formData.date) {
-      toast.error('Please select a date');
+      toast.error("Please select a date");
       return;
     }
 
     if (!formData.serviceType) {
-      toast.error('Please select a service type');
+      toast.error("Please select a service type");
       return;
     }
 
     const total = parseInt(formData.totalAttendance);
-    if (!total || total < 0) {
-      toast.error('Please enter a valid total attendance (must be 0 or greater)');
+    if (isNaN(total) || total < 0) {
+      toast.error(
+        "Please enter a valid total attendance (must be 0 or greater)"
+      );
       return;
     }
 
     // Check if breakdown adds up to total
-    const breakdown = (parseInt(formData.adults) || 0) + 
-                     (parseInt(formData.youth) || 0) + 
-                     (parseInt(formData.children) || 0) + 
-                     (parseInt(formData.visitors) || 0);
-    
+    const breakdown =
+      (parseInt(formData.adults) || 0) +
+      (parseInt(formData.youth) || 0) +
+      (parseInt(formData.children) || 0) +
+      (parseInt(formData.visitors) || 0);
+
     if (breakdown !== total) {
-      toast.error(`Attendance breakdown (${breakdown}) doesn't match total (${total})`);
+      toast.error(
+        `Attendance breakdown (${breakdown}) doesn't match total (${total})`
+      );
       return;
     }
 
     try {
       setLoading(true);
 
-      // ✅ FIXED: Proper data structure matching backend expectations
+      // ✅ FIXED: Only send present members, timeArrived is optional
+      const presentMembers = selectedMembers
+        .filter((m) => m.present === true)
+        .map((member) => ({
+          memberId: member.memberId,
+          present: true,
+          timeArrived: member.timeArrived || null, // ✅ Send null if empty, not required
+          notes: null, // Optional field
+        }));
+
       const attendanceData = {
         date: formData.date,
         serviceType: formData.serviceType,
@@ -145,24 +158,23 @@ const NewAttendance = () => {
         youth: parseInt(formData.youth) || 0,
         children: parseInt(formData.children) || 0,
         visitors: parseInt(formData.visitors) || 0,
-        notes: formData.notes.trim() || '', // ✅ ADDED: Include notes
-        members: selectedMembers.filter(m => m.present) // Only send present members
+        notes: formData.notes.trim() || "",
+        members: presentMembers, // ✅ Only present members
       };
 
-      console.log('Submitting attendance data:', attendanceData); // ✅ Debug log
+      console.log("✅ Submitting attendance data:", attendanceData);
 
       const response = await attendanceAPI.createAttendance(attendanceData);
 
       if (response.success) {
-        toast.success('Attendance recorded successfully!');
-        navigate('/attendance');
+        toast.success("Attendance recorded successfully!");
+        navigate("/attendance");
       } else {
-        // ✅ IMPROVED: Show detailed error message
-        const errorMsg = response.message || 'Failed to record attendance';
+        const errorMsg = response.message || "Failed to record attendance";
         const errors = response.errors;
-        
+
         if (errors && Array.isArray(errors)) {
-          errors.forEach(err => {
+          errors.forEach((err) => {
             toast.error(err.msg || err.message || err);
           });
         } else {
@@ -170,18 +182,18 @@ const NewAttendance = () => {
         }
       }
     } catch (error) {
-      console.error('Error recording attendance:', error);
-      toast.error(error.message || 'Failed to record attendance');
+      console.error("Error recording attendance:", error);
+      toast.error(error.message || "Failed to record attendance");
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredMembers = availableMembers.filter(member =>
+  const filteredMembers = availableMembers.filter((member) =>
     member.name.toLowerCase().includes(memberSearchTerm.toLowerCase())
   );
 
-  const presentCount = selectedMembers.filter(m => m.present).length;
+  const presentCount = selectedMembers.filter((m) => m.present).length;
   const absentCount = selectedMembers.length - presentCount;
 
   return (
@@ -189,11 +201,15 @@ const NewAttendance = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Record Attendance</h1>
-          <p className="text-gray-600 mt-1">Record attendance for church service</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Record Attendance
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Record attendance for church service
+          </p>
         </div>
         <button
-          onClick={() => navigate('/attendance')}
+          onClick={() => navigate("/attendance")}
           className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
         >
           <i className="ri-arrow-left-line mr-2"></i>
@@ -204,7 +220,9 @@ const NewAttendance = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Information */}
         <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Service Information</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Service Information
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -231,8 +249,10 @@ const NewAttendance = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Select Service Type</option>
-                {serviceTypes.map(type => (
-                  <option key={type} value={type}>{type}</option>
+                {serviceTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
                 ))}
               </select>
             </div>
@@ -241,7 +261,9 @@ const NewAttendance = () => {
 
         {/* Attendance Numbers */}
         <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Attendance Count</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Attendance Count
+          </h2>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -319,11 +341,12 @@ const NewAttendance = () => {
           <div className="mt-4 p-3 bg-blue-50 rounded-lg">
             <p className="text-sm text-blue-700">
               <i className="ri-information-line mr-2"></i>
-              Total attendance is automatically calculated from the breakdown above.
+              Total attendance is automatically calculated from the breakdown
+              above.
             </p>
           </div>
 
-          {/* ✅ ADDED: Notes field */}
+          {/* Notes field */}
           <div className="mt-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Notes (Optional)
@@ -347,19 +370,23 @@ const NewAttendance = () => {
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Member Attendance</h2>
-              <p className="text-sm text-gray-600">Track individual member attendance (optional)</p>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Member Attendance
+              </h2>
+              <p className="text-sm text-gray-600">
+                Track individual member attendance (optional)
+              </p>
             </div>
             <button
               type="button"
               onClick={() => setShowMemberSelection(!showMemberSelection)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                showMemberSelection 
-                  ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                showMemberSelection
+                  ? "bg-red-100 text-red-700 hover:bg-red-200"
+                  : "bg-blue-100 text-blue-700 hover:bg-blue-200"
               }`}
             >
-              {showMemberSelection ? 'Hide Members' : 'Track Members'}
+              {showMemberSelection ? "Hide Members" : "Track Members"}
             </button>
           </div>
 
@@ -398,29 +425,52 @@ const NewAttendance = () => {
               ) : (
                 <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
                   <div className="space-y-1 p-2">
-                    {filteredMembers.map(member => {
-                      const memberAttendance = selectedMembers.find(m => m.memberId === member.id);
+                    {filteredMembers.map((member) => {
+                      const memberAttendance = selectedMembers.find(
+                        (m) => m.memberId === member.id
+                      );
                       return (
-                        <div key={member.id} className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg hover:bg-gray-50">
-                          <div className="flex items-center">
+                        <div
+                          key={member.id}
+                          className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg hover:bg-gray-50"
+                        >
+                          <div className="flex items-center flex-1">
                             <input
                               type="checkbox"
                               checked={memberAttendance?.present || false}
-                              onChange={(e) => handleMemberAttendanceChange(member.id, 'present', e.target.checked)}
+                              onChange={(e) =>
+                                handleMemberAttendanceChange(
+                                  member.id,
+                                  "present",
+                                  e.target.checked
+                                )
+                              }
                               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                             />
                             <div className="ml-3">
-                              <p className="text-sm font-medium text-gray-900">{member.name}</p>
-                              <p className="text-xs text-gray-500">{member.department}</p>
+                              <p className="text-sm font-medium text-gray-900">
+                                {member.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {member.department}
+                              </p>
                             </div>
                           </div>
                           {memberAttendance?.present && (
-                            <div className="flex items-center">
-                              <label className="text-xs text-gray-600 mr-2">Arrival time:</label>
+                            <div className="flex items-center ml-4">
+                              <label className="text-xs text-gray-600 mr-2">
+                                Arrival time (optional):
+                              </label>
                               <input
                                 type="time"
-                                value={memberAttendance.timeArrived}
-                                onChange={(e) => handleMemberAttendanceChange(member.id, 'timeArrived', e.target.value)}
+                                value={memberAttendance.timeArrived || ""}
+                                onChange={(e) =>
+                                  handleMemberAttendanceChange(
+                                    member.id,
+                                    "timeArrived",
+                                    e.target.value
+                                  )
+                                }
                                 className="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
                               />
                             </div>
@@ -429,10 +479,12 @@ const NewAttendance = () => {
                       );
                     })}
                   </div>
-                  
+
                   {filteredMembers.length === 0 && (
                     <div className="text-center py-8">
-                      <p className="text-gray-500">No members found matching your search.</p>
+                      <p className="text-gray-500">
+                        No members found matching your search.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -445,7 +497,7 @@ const NewAttendance = () => {
         <div className="flex justify-end space-x-3">
           <button
             type="button"
-            onClick={() => navigate('/attendance')}
+            onClick={() => navigate("/attendance")}
             className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancel
@@ -456,12 +508,28 @@ const NewAttendance = () => {
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
           >
             {loading && (
-              <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <svg
+                className="animate-spin -ml-1 mr-3 h-4 w-4 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
             )}
-            {loading ? 'Recording...' : 'Record Attendance'}
+            {loading ? "Recording..." : "Record Attendance"}
           </button>
         </div>
       </form>
