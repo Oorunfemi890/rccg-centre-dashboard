@@ -261,7 +261,7 @@ const Login = () => {
             </div>
 
             {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-gray-50 rounded-md border border-gray-200">
+            {/* <div className="mt-6 p-4 bg-gray-50 rounded-md border border-gray-200">
               <h4 className="text-sm font-medium text-gray-900 mb-2">Demo Credentials:</h4>
               <div className="text-xs text-gray-600 space-y-1">
                 <p><strong>Super Admin:</strong> admin@rccglcc.org / admin123</p>
@@ -281,7 +281,7 @@ const Login = () => {
                   Use Super Admin credentials
                 </button>
               </div>
-            </div>
+            </div> */}
           </form>
 
           {/* Back to Website */}
