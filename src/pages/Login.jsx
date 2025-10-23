@@ -285,7 +285,7 @@ const Login = () => {
           </form>
 
           {/* Back to Website */}
-          <div className="mt-6 text-center">
+          {/* <div className="mt-6 text-center">
             <Link 
               to="https://rccg-center.netlify.app/" 
               className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
@@ -293,7 +293,7 @@ const Login = () => {
               <i className="ri-arrow-left-line mr-1"></i>
               Back to website
             </Link>
-          </div>
+          </div> */}
         </div>
       </div>
 
